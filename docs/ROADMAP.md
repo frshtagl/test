@@ -31,14 +31,25 @@
 - [x] Ambient floating particles and subtle animated lighting pulses
 - [ ] Manual visual/performance playtest on desktop and mobile
 
-## 0.3 — World and progression
+## 0.3 — Character and enemy evolution
+- [x] Articulated player armor, helmet, visor, backpack and limb rig
+- [x] Animated player walk and sprint cycles with idle motion
+- [x] Three distinct robot silhouettes and armor profiles
+- [x] Scout blades and lightweight hunter frame
+- [x] Gunner shoulder cannon, optic and firing recoil
+- [x] Heavy armor plating, reactor core and reinforced limbs
+- [x] Enemy gait animation, head motion and hit-flash response
+- [x] Distinct weapon geometry for rifle, shotgun and precision rifle
+- [ ] Manual animation, combat readability and performance playtest
+
+## 0.4 — World and progression
 - [ ] Additional arenas and environmental hazards
 - [ ] Upgrade choices between waves
 - [ ] Character cosmetics and unlocks
 - [ ] Audio and accessibility settings
 - [ ] Local leaderboard and run history
 
-## 0.4 — Online features
+## 0.5 — Online features
 - [ ] Evaluate authoritative server architecture
 - [ ] Co-op PvE prototype
 - [ ] Lobby and matchmaking
