@@ -161,19 +161,31 @@
 - [ ] Hitscan rifle/precision fire and deterministic shotgun pellet rays
 - [ ] Cover-aware hit registration and impact feedback
 
-## 1.8 — Enemy AI and tactical navigation
+## 1.8 — Deterministic combat and hit registration
+- [x] Replace player travel projectiles with immediate cover-aware hitscan
+- [x] Resolve nearest hit against arena AABB obstacles and enemy hit zones
+- [x] Add deterministic uniform-cone pellet spread with per-shot seed
+- [x] Add head, torso and exposed Heavy rear-reactor damage zones
+- [x] Add weapon-specific effective ranges and critical damage multipliers
+- [x] Add surface-specific impact marks, sparks and short-lived tracers
+- [x] Add weapon-viewmodel recoil recovery and critical hit confirmation
+- [x] Add ray, spread, nearest-hit and cover-occlusion regression tests
+- [ ] Browser visual review of recoil, impacts and pellet density
+- [ ] Tune hit-zone dimensions against in-game enemy silhouettes
+
+## 1.9 — Tactical enemy AI and navigation
 - [ ] Explicit enemy finite-state machines and attack telegraphs
 - [ ] Perception: field of view, line of sight and last-known player position
 - [ ] Local obstacle avoidance, stuck detection and recovery
 - [ ] Scout flanking, Gunner repositioning and Heavy weak-point behavior
 - [ ] Tactical cover selection after navigation tests pass
 
-## 1.9 — Audio, accessibility and encounter design
+## 2.0 — Audio, accessibility and encounter design
 - [ ] Spatial weapon/enemy audio and combat telegraphs
-- [ ] Pause/settings menu, reduced-motion option and control remapping
+- [ ] Reduced-motion option and control remapping
 - [ ] Additional arena layouts, hazards and deterministic wave composition
 
-## 2.0 — Performance and release QA
+## 2.1 — Performance and release QA
 - [ ] Before/after browser screenshots
 - [ ] Desktop and compact viewport review
 - [ ] FPS and frame-time p50/p95 per graphics preset

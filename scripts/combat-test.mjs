@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {normalizeVector,createSeededRandom,generatePelletDirections,raySphere,rayAabb,resolveHitscan} from '../src/gameplay/combat.mjs';
+const close=(a,b,t=1e-6)=>assert.ok(Math.abs(a-b)<=t,`expected ${a} ≈ ${b}`);
+const base={x:0,y:0,z:-1},a=generatePelletDirections(base,7,.105,0xA2E2026),b=generatePelletDirections(base,7,.105,0xA2E2026);
+assert.deepEqual(a,b);assert.equal(a.length,7);assert.ok(a.some((v,i)=>i>0&&Math.abs(v.x-a[0].x)>1e-6));
+for(const v of a){close(Math.hypot(v.x,v.y,v.z),1);assert.ok(v.z<0);assert.ok(Math.acos(Math.max(-1,Math.min(1,-v.z)))<=.105+1e-6);}
+assert.deepEqual(generatePelletDirections(base,1,0,42),[base]);assert.deepEqual(normalizeVector({x:0,y:0,z:0}),base);
+const ra=createSeededRandom(91),rb=createSeededRandom(91);for(let i=0;i<8;i++)close(ra(),rb());
+const sphere=raySphere({x:0,y:0,z:5},base,{x:0,y:0,z:0},1,20);assert.ok(sphere);close(sphere.distance,4);close(sphere.point.z,1);close(sphere.normal.z,1);assert.equal(raySphere({x:4,y:0,z:5},base,{x:0,y:0,z:0},1,20),null);
+const pillar={id:'pillar',x:0,z:2,halfX:1,halfZ:1,centerY:1.5,halfY:1.5,material:'concrete'},wall=rayAabb({x:0,y:1,z:5},base,pillar,20);assert.ok(wall);close(wall.distance,2);close(wall.point.z,3);close(wall.normal.z,1);
+assert.equal(rayAabb({x:3,y:1,z:5},base,pillar,20),null);assert.equal(rayAabb({x:0,y:4,z:5},base,pillar,20),null);
+const inside=rayAabb({x:0,y:1,z:2},base,pillar,20);assert.ok(inside?.startedInside);close(inside.distance,1);close(inside.normal.z,-1);
+const enemy={id:'target-1',zones:[{zone:'head',center:{x:0,y:2,z:0},radius:.3,damageMultiplier:2},{zone:'torso',center:{x:0,y:1,z:0},radius:.48,damageMultiplier:1}]};
+const head=resolveHitscan({origin:{x:0,y:2,z:5},direction:base,maxDistance:50,targets:[enemy]});assert.equal(head.kind,'enemy');assert.equal(head.target.id,'target-1');assert.equal(head.zone,'head');close(head.damageMultiplier,2);
+const torso=resolveHitscan({origin:{x:0,y:1,z:5},direction:base,maxDistance:50,targets:[enemy]});assert.equal(torso.zone,'torso');
+const blocked=resolveHitscan({origin:{x:0,y:1,z:5},direction:base,maxDistance:50,obstacles:[pillar],targets:[enemy]});assert.equal(blocked.kind,'obstacle');assert.equal(blocked.material,'concrete');
+const clear=resolveHitscan({origin:{x:0,y:2,z:5},direction:base,maxDistance:50,obstacles:[{...pillar,z:-3}],targets:[enemy]});assert.equal(clear.kind,'enemy');
+const miss=resolveHitscan({origin:{x:4,y:2,z:5},direction:base,maxDistance:12,targets:[enemy]});assert.equal(miss.kind,'miss');close(miss.distance,12);close(miss.point.z,-7);
+const nearest=resolveHitscan({origin:{x:0,y:2,z:8},direction:base,maxDistance:50,targets:[{id:'far',zones:[{zone:'torso',center:{x:0,y:2,z:0},radius:.5}]},{id:'near',zones:[{zone:'head',center:{x:0,y:2,z:3},radius:.4,damageMultiplier:2}]}]});assert.equal(nearest.target.id,'near');
+console.log('ARENA ZERO combat checks passed: deterministic spread, ray/sphere, ray/AABB, hit zones, nearest-hit and cover occlusion.');
