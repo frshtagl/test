@@ -18,6 +18,9 @@
 - [x] Swept projectile collision to prevent fast shots tunnelling through targets
 - [x] Arena cover collision for player/enemies; cover blocks shots and dash movement
 - [x] Cleanup of transient geometries and materials between waves/runs
+- [x] Clear-line-of-sight target acquisition so auto-fire does not lock through cover
+- [x] Weapon swaps dispose old weapon meshes and materials
+- [x] Elimination counter records one per enemy, not weighted enemy points
 - [ ] Manual playtest and balance pass across desktop/mobile
 
 ## 0.3 — World and progression
