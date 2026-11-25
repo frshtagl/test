@@ -8,7 +8,7 @@ A third-person PvE browser arena shooter built with Three.js. Character Build 0.
 2. Start a static web server from the repository root: python -m http.server 8000
 3. Visit http://localhost:8000 in a modern browser.
 
-The project loads Three.js from a CDN, so an internet connection is required.
+The project loads Three.js from a CDN, with an automatic jsDelivr-to-unpkg fallback. An internet connection is required. The deployment buttons are bound immediately while the engine loads; startup errors are shown on the title screen rather than leaving an unresponsive button.
 
 ## Controls
 
