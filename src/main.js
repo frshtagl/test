@@ -172,15 +172,105 @@ function resolveArenaCollisions(position, radius) {
 
 const player = new THREE.Group();
 scene.add(player);
-const body = new THREE.Mesh(new THREE.CapsuleGeometry(.48, .95, 5, 10), mat(0x294a63, .5, .55));
-body.position.y = 1.12;
-body.castShadow = true;
-player.add(body);
-const visor = new THREE.Mesh(new THREE.BoxGeometry(.55, .16, .12), cyanMat);
-visor.position.set(0, 1.55, -.37);
-player.add(visor);
-box(player, -.42, 1.3, -.05, .28, .35, .35, mat(0x172b3e));
-box(player, .42, 1.3, -.05, .28, .35, .35, mat(0x172b3e));
+const playerRig = new THREE.Group();
+player.add(playerRig);
+const playerArmor = mat(0x294a63, .38, .72);
+const playerDark = mat(0x101d2b, .48, .72);
+const playerJoint = mat(0x657f91, .42, .72);
+const playerCore = mat(0x42e8f2, .25, .35, 0x16a9bd);
+const playerTorso = new THREE.Mesh(new THREE.CapsuleGeometry(.39, .62, 6, 12), playerArmor);
+playerTorso.position.set(0, 1.3, 0);
+playerTorso.castShadow = true;
+playerRig.add(playerTorso);
+box(playerRig, 0, .88, 0, .52, .28, .42, playerDark);
+box(playerRig, 0, 1.42, -.34, .7, .48, .17, playerArmor);
+box(playerRig, 0, 1.13, -.32, .52, .16, .16, playerDark);
+box(playerRig, -.39, 1.38, -.12, .16, .38, .34, playerDark);
+box(playerRig, .39, 1.38, -.12, .16, .38, .34, playerDark);
+const chestCore = new THREE.Mesh(new THREE.SphereGeometry(.105, 12, 10), playerCore);
+chestCore.position.set(0, 1.43, -.445);
+playerRig.add(chestCore);
+const chestRing = new THREE.Mesh(new THREE.TorusGeometry(.16, .025, 8, 24), playerJoint);
+chestRing.position.set(0, 1.43, -.445);
+chestRing.rotation.y = Math.PI;
+playerRig.add(chestRing);
+const backpack = box(playerRig, 0, 1.38, .39, .56, .62, .3, playerDark);
+box(playerRig, 0, 1.58, .56, .34, .22, .08, playerCore);
+const headRig = new THREE.Group();
+headRig.position.set(0, 2.05, 0);
+playerRig.add(headRig);
+const helmet = new THREE.Mesh(new THREE.SphereGeometry(.29, 18, 14), playerArmor);
+helmet.scale.set(1.08, 1.12, 1);
+helmet.castShadow = true;
+headRig.add(helmet);
+box(headRig, 0, -.015, -.265, .43, .12, .075, playerCore);
+box(headRig, 0, .17, .035, .34, .09, .32, playerDark);
+for (const side of [-1, 1]) {
+  const ear = new THREE.Mesh(new THREE.BoxGeometry(.09, .2, .2), playerJoint);
+  ear.position.set(side * .29, -.015, 0);
+  headRig.add(ear);
+}
+const antenna = new THREE.Mesh(new THREE.CylinderGeometry(.018, .025, .2, 8), playerJoint);
+antenna.position.set(.17, .36, .02);
+headRig.add(antenna);
+const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(.055, 8, 8), playerCore);
+antennaTip.position.set(.17, .47, .02);
+headRig.add(antennaTip);
+
+function buildPlayerArm(side) {
+  const pivot = new THREE.Group();
+  pivot.position.set(side * .49, 1.63, -.015);
+  pivot.rotation.x = .38;
+  playerRig.add(pivot);
+  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(.135, .38, 4, 8), playerArmor);
+  upper.position.set(side * .015, -.22, 0);
+  upper.castShadow = true;
+  pivot.add(upper);
+  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(.22, 12, 10), playerJoint);
+  shoulder.scale.set(1.12, .72, 1);
+  shoulder.position.set(side * .025, -.015, 0);
+  pivot.add(shoulder);
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 8), playerDark);
+  elbow.position.set(side * .025, -.45, -.015);
+  pivot.add(elbow);
+  const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(.115, .34, 4, 8), playerDark);
+  forearm.position.set(side * .035, -.66, -.075);
+  forearm.castShadow = true;
+  pivot.add(forearm);
+  box(pivot, side * .035, -.68, -.16, .25, .18, .22, playerArmor);
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(.105, 10, 8), playerJoint);
+  hand.position.set(side * .035, -.89, -.12);
+  pivot.add(hand);
+  return pivot;
+}
+const leftArm = buildPlayerArm(-1);
+const rightArm = buildPlayerArm(1);
+
+function buildPlayerLeg(side) {
+  const hip = new THREE.Group();
+  hip.position.set(side * .205, .83, 0);
+  playerRig.add(hip);
+  const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(.17, .42, 4, 8), playerArmor);
+  thigh.position.y = -.22;
+  thigh.castShadow = true;
+  hip.add(thigh);
+  const knee = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), playerJoint);
+  knee.position.set(0, -.45, -.025);
+  hip.add(knee);
+  const shinPivot = new THREE.Group();
+  shinPivot.position.set(0, -.45, 0);
+  hip.add(shinPivot);
+  const shin = new THREE.Mesh(new THREE.CapsuleGeometry(.135, .39, 4, 8), playerDark);
+  shin.position.y = -.22;
+  shin.castShadow = true;
+  shinPivot.add(shin);
+  box(shinPivot, 0, -.37, -.07, .28, .2, .4, playerArmor);
+  box(shinPivot, 0, -.18, -.145, .2, .08, .035, playerCore);
+  return { hip, knee: shinPivot };
+}
+const leftLeg = buildPlayerLeg(-1);
+const rightLeg = buildPlayerLeg(1);
+const playerParts = { leftArm, rightArm, leftLeg, rightLeg, torso: playerTorso, head: headRig };
 const gunGroup = new THREE.Group();
 player.add(gunGroup);
 const muzzle = new THREE.Object3D();
@@ -198,16 +288,55 @@ function buildWeaponVisual() {
   disposeObject3D(gunGroup);
   gunGroup.clear();
   const def = weapons[currentWeapon];
-  const metal = mat(currentWeapon === 'shotgun' ? 0x9b795b : currentWeapon === 'precision' ? 0x8d83b4 : 0x9baebe, .3, .8);
+  const metal = mat(currentWeapon === 'shotgun' ? 0x9b795b : currentWeapon === 'precision' ? 0x8d83b4 : 0x9baebe, .28, .86);
+  const darkMetal = mat(0x172635, .38, .78);
   const glow = mat(
     currentWeapon === 'shotgun' ? 0xff7a43 : currentWeapon === 'precision' ? 0xb58aff : 0x24d8ed,
-    .35, .4,
+    .28, .45,
     currentWeapon === 'shotgun' ? 0x8a260c : currentWeapon === 'precision' ? 0x5426a8 : 0x087b90
   );
-  box(gunGroup, .35, 1.25, -.55, currentWeapon === 'precision' ? .24 : .18, .18, currentWeapon === 'shotgun' ? 1 : currentWeapon === 'precision' ? 1.25 : .8, metal);
-  box(gunGroup, .35, 1.25, currentWeapon === 'precision' ? -.7 : -.53, .1, .08, .35, glow);
-  if (currentWeapon === 'shotgun') box(gunGroup, .35, 1.1, -.48, .2, .18, .35, metal);
-  muzzle.position.set(.35, 1.25, currentWeapon === 'precision' ? -1.42 : currentWeapon === 'shotgun' ? -1.08 : -.98);
+  const isShotgun = currentWeapon === 'shotgun';
+  const isPrecision = currentWeapon === 'precision';
+  const receiverZ = -.48;
+  box(gunGroup, .35, 1.36, receiverZ, isPrecision ? .25 : .22, .2, isShotgun ? .58 : .52, metal);
+  box(gunGroup, .35, 1.47, receiverZ + .015, .13, .045, .48, darkMetal);
+  box(gunGroup, .35, 1.36, -.34, .28, .13, .19, darkMetal);
+  box(gunGroup, .35, 1.22, -.29, .14, .25, .18, darkMetal);
+  box(gunGroup, .35, 1.18, .035, .2, .28, .34, metal);
+  box(gunGroup, .35, 1.31, .205, .24, .12, .09, darkMetal);
+  box(gunGroup, .35, 1.49, -.51, .09, .08, .26, glow);
+
+  const barrelLength = isPrecision ? .96 : isShotgun ? .62 : .72;
+  const barrelZ = isPrecision ? -1.15 : isShotgun ? -.91 : -.98;
+  const barrelXs = isShotgun ? [.285, .415] : [.35];
+  for (const x of barrelXs) {
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(isPrecision ? .065 : .055, .075, barrelLength, 12), metal);
+    barrel.rotation.x = -Math.PI / 2;
+    barrel.position.set(x, 1.36, barrelZ);
+    barrel.castShadow = true;
+    gunGroup.add(barrel);
+    const muzzleRing = new THREE.Mesh(new THREE.TorusGeometry(isPrecision ? .07 : .06, .018, 8, 16), glow);
+    muzzleRing.rotation.y = Math.PI;
+    muzzleRing.position.set(x, 1.36, barrelZ - barrelLength * .51);
+    gunGroup.add(muzzleRing);
+  }
+  if (isPrecision) {
+    box(gunGroup, .35, 1.57, -.52, .12, .13, .32, darkMetal);
+    const scope = new THREE.Mesh(new THREE.CylinderGeometry(.075, .075, .34, 12), metal);
+    scope.rotation.x = -Math.PI / 2;
+    scope.position.set(.35, 1.64, -.57);
+    gunGroup.add(scope);
+    box(gunGroup, .35, 1.65, -.57, .07, .055, .26, glow);
+    box(gunGroup, .35, 1.11, -.08, .22, .28, .18, darkMetal);
+  } else if (isShotgun) {
+    box(gunGroup, .35, 1.12, -.35, .25, .19, .34, metal);
+    box(gunGroup, .35, 1.53, -.4, .08, .08, .22, glow);
+  } else {
+    box(gunGroup, .35, 1.56, -.5, .09, .1, .3, darkMetal);
+    box(gunGroup, .35, 1.6, -.53, .055, .035, .22, glow);
+    box(gunGroup, .35, 1.13, -.44, .16, .27, .19, darkMetal);
+  }
+  muzzle.position.set(.35, 1.36, barrelZ - barrelLength * .57);
   $('weapon-name').textContent = def.name;
   $('weapon-desc').textContent = def.description;
   $('weapon-short').textContent = def.short;
@@ -232,7 +361,7 @@ let health = 100, kills = 0, wave = 1, bestKills = 0;
 let reloading = false, reloadRemaining = 0, lastShot = 0;
 let dashCooldown = 0, invuln = 0, spawnTimer = 0, spawnCooldown = 0;
 let toastTimer = 0, hitTimer = 0, damageFlashTimer = 0, target = null;
-let spawnQueue = 0;
+let spawnQueue = 0, animationClock = 0;
 const enemies = [], shots = [], effects = [];
 try {
   const storedBest = Number(localStorage.getItem('arena-zero-best') || 0);
@@ -288,33 +417,158 @@ function makeEnemy() {
   const cfg = configs[type];
   const enemy = new THREE.Group();
   enemy.scale.setScalar(cfg.scale);
-  const shell = mat(cfg.color, .48, .55, 0x180d18);
-  const core = mat(cfg.eye, .3, .25, cfg.eye);
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(type === 'heavy' ? 1.35 : .95, type === 'scout' ? .85 : 1.15, .7), shell);
-  torso.position.y = 1.15;
+  const rig = new THREE.Group();
+  enemy.add(rig);
+  const shell = mat(cfg.color, .38, .76, 0x180d18);
+  const dark = mat(type === 'heavy' ? 0x263644 : 0x182536, .48, .78);
+  const joint = mat(type === 'scout' ? 0x7d5147 : type === 'gunner' ? 0x77709d : 0x8093a1, .38, .78);
+  const core = mat(cfg.eye, .22, .38, cfg.eye);
+  const accent = mat(type === 'scout' ? 0xff9a57 : type === 'gunner' ? 0xc3a0ff : 0xff6f54, .28, .48, cfg.eye);
+  const torsoGeometry = type === 'scout'
+    ? new THREE.CapsuleGeometry(.31, .58, 5, 9)
+    : type === 'heavy'
+      ? new THREE.BoxGeometry(1.12, 1.08, .76)
+      : new THREE.CapsuleGeometry(.42, .72, 5, 10);
+  const torso = new THREE.Mesh(torsoGeometry, shell);
+  torso.position.set(0, 1.28, 0);
   torso.castShadow = true;
-  enemy.add(torso);
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(type === 'heavy' ? .48 : .4, 1), shell);
-  head.position.y = type === 'scout' ? 1.78 : 1.98;
+  torso.receiveShadow = true;
+  rig.add(torso);
+  box(rig, 0, 1.38, -.34, type === 'heavy' ? 1.02 : .7, type === 'heavy' ? .62 : .46, .16, dark);
+  box(rig, 0, 1.18, -.435, type === 'heavy' ? .58 : .38, .16, .075, accent);
+  box(rig, 0, 1.34, .43, type === 'heavy' ? .9 : .58, .62, .28, dark);
+  box(rig, 0, 1.58, .59, .3, .18, .08, core);
+
+  const headRig = new THREE.Group();
+  headRig.position.set(0, type === 'scout' ? 1.96 : 2.02, -.015);
+  rig.add(headRig);
+  const headGeometry = type === 'scout'
+    ? new THREE.OctahedronGeometry(.36, 1)
+    : type === 'heavy'
+      ? new THREE.DodecahedronGeometry(.43, 0)
+      : new THREE.SphereGeometry(.35, 14, 12);
+  const head = new THREE.Mesh(headGeometry, shell);
+  head.scale.set(type === 'heavy' ? 1.2 : 1, type === 'scout' ? .86 : 1, .92);
   head.castShadow = true;
-  enemy.add(head);
-  const eye = new THREE.Mesh(new THREE.BoxGeometry(.48, .12, .08), core);
-  eye.position.set(0, head.position.y, -.39);
-  enemy.add(eye);
+  headRig.add(head);
+  box(headRig, 0, -.015, -.31, type === 'heavy' ? .5 : .46, .12, .075, core);
+  box(headRig, 0, .18, .035, .32, .09, .28, dark);
   for (const side of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(.25, type === 'heavy' ? .9 : .7, .3), shell);
-    leg.position.set(side * .28, .36, 0);
-    enemy.add(leg);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(type === 'heavy' ? .34 : .22, .8, .25), shell);
-    arm.position.set(side * (type === 'heavy' ? .78 : .62), 1.2, 0);
-    enemy.add(arm);
+    const sensor = new THREE.Mesh(new THREE.SphereGeometry(.055, 8, 8), accent);
+    sensor.position.set(side * .24, -.03, -.28);
+    headRig.add(sensor);
   }
+
+  function buildEnemyLimb(side, isArm) {
+    const width = type === 'heavy' ? (isArm ? .19 : .2) : type === 'gunner' ? (isArm ? .14 : .15) : (isArm ? .105 : .12);
+    const upperLength = isArm ? (type === 'heavy' ? .48 : .4) : (type === 'heavy' ? .52 : .43);
+    const lowerLength = isArm ? (type === 'heavy' ? .43 : .36) : (type === 'heavy' ? .5 : .42);
+    const pivot = new THREE.Group();
+    pivot.position.set(side * (isArm ? (type === 'heavy' ? .68 : .49) : .25), isArm ? 1.62 : .82, 0);
+    rig.add(pivot);
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(width, upperLength, 4, 8), shell);
+    upper.position.set(0, -upperLength * .43, 0);
+    upper.castShadow = true;
+    pivot.add(upper);
+    const jointMesh = new THREE.Mesh(new THREE.SphereGeometry(width * 1.12, 9, 8), joint);
+    jointMesh.position.set(0, -upperLength * .86, -.015);
+    pivot.add(jointMesh);
+    const lowerPivot = new THREE.Group();
+    lowerPivot.position.set(0, -upperLength * .86, 0);
+    pivot.add(lowerPivot);
+    const lower = new THREE.Mesh(new THREE.CapsuleGeometry(width * .86, lowerLength, 4, 8), dark);
+    lower.position.set(0, -lowerLength * .43, -.025);
+    lower.castShadow = true;
+    lowerPivot.add(lower);
+    if (isArm) {
+      const gauntlet = new THREE.Mesh(new THREE.BoxGeometry(width * 2.15, .2, .25), shell);
+      gauntlet.position.set(0, -lowerLength * .7, -.075);
+      lowerPivot.add(gauntlet);
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(width * .8, 8, 8), joint);
+      hand.position.set(0, -lowerLength * .92, -.07);
+      lowerPivot.add(hand);
+    } else {
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(width * 2.05, .16, .36), dark);
+      foot.position.set(0, -lowerLength * .86, -.1);
+      foot.castShadow = true;
+      lowerPivot.add(foot);
+      box(lowerPivot, 0, -lowerLength * .86, -.285, width * 1.25, .055, .04, accent);
+    }
+    return { upper: pivot, lower: lowerPivot };
+  }
+
+  const leftLeg = buildEnemyLimb(-1, false);
+  const rightLeg = buildEnemyLimb(1, false);
+  const leftArm = buildEnemyLimb(-1, true);
+  const rightArm = buildEnemyLimb(1, true);
+  for (const side of [-1, 1]) {
+    if (type === 'heavy') {
+      const shoulder = new THREE.Mesh(new THREE.BoxGeometry(.52, .36, .58), shell);
+      shoulder.position.set(side * .68, 1.75, -.015);
+      shoulder.castShadow = true;
+      rig.add(shoulder);
+      box(rig, side * .68, 1.88, -.12, .38, .08, .42, accent);
+    } else {
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(type === 'gunner' ? .24 : .18, 10, 8), joint);
+      shoulder.position.set(side * .52, 1.63, 0);
+      shoulder.scale.set(1.15, .85, 1);
+      rig.add(shoulder);
+    }
+  }
+
+  if (type === 'scout') {
+    for (const side of [-1, 1]) {
+      const blade = new THREE.Mesh(new THREE.ConeGeometry(.09, .48, 6), accent);
+      blade.position.set(side * .58, .82, -.13);
+      blade.rotation.z = side * -.22;
+      rig.add(blade);
+      const fin = new THREE.Mesh(new THREE.ConeGeometry(.1, .42, 6), shell);
+      fin.position.set(side * .29, 1.45, .34);
+      fin.rotation.z = side * .65;
+      rig.add(fin);
+    }
+  } else if (type === 'gunner') {
+    const cannon = new THREE.Group();
+    cannon.position.set(.62, 1.68, -.04);
+    rig.add(cannon);
+    box(cannon, 0, 0, .02, .34, .32, .38, dark);
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(.12, .16, .78, 12), shell);
+    barrel.rotation.x = -Math.PI / 2;
+    barrel.position.set(0, 0, -.43);
+    cannon.add(barrel);
+    const muzzleGlow = new THREE.Mesh(new THREE.TorusGeometry(.13, .025, 8, 14), core);
+    muzzleGlow.rotation.y = Math.PI;
+    muzzleGlow.position.set(0, 0, -.83);
+    cannon.add(muzzleGlow);
+    box(cannon, 0, .2, -.08, .12, .08, .3, accent);
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(.025, .04, .34, 8), joint);
+    antenna.position.set(-.22, .42, .08);
+    cannon.add(antenna);
+  } else {
+    const reactor = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 10), core);
+    reactor.position.set(0, 1.35, -.49);
+    rig.add(reactor);
+    const reactorRing = new THREE.Mesh(new THREE.TorusGeometry(.29, .045, 8, 18), accent);
+    reactorRing.position.copy(reactor.position);
+    reactorRing.rotation.y = Math.PI;
+    rig.add(reactorRing);
+    box(rig, 0, .82, -.28, .78, .25, .32, dark);
+    for (const side of [-1, 1]) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(.13, .34, 6), accent);
+      horn.position.set(side * .43, 2.05, .03);
+      horn.rotation.z = side * -.45;
+      rig.add(horn);
+    }
+  }
+
+  const barY = type === 'heavy' ? 3.05 : 2.68;
   const barBack = new THREE.Mesh(new THREE.BoxGeometry(1.25, .09, .06), mat(0x101820));
-  barBack.position.set(0, 2.55, 0);
+  barBack.position.set(0, barY, 0);
   enemy.add(barBack);
   const barFill = new THREE.Mesh(new THREE.BoxGeometry(1.2, .055, .07), mat(0x69f2b7, .4, .1, 0x176b45));
-  barFill.position.set(0, 2.55, -.045);
+  barFill.position.set(0, barY, -.045);
   enemy.add(barFill);
+
   const a = Math.random() * Math.PI * 2;
   const r = 17 + Math.random() * 5;
   enemy.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
@@ -324,7 +578,11 @@ function makeEnemy() {
   enemy.userData = {
     type, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, damage: cfg.damage,
     range: cfg.range, cooldown: Math.random() * .7, attackRate: cfg.cooldown,
-    radius: cfg.radius, points: cfg.points, barFill
+    radius: cfg.radius, points: cfg.points, barFill, rig, shell,
+    legs: { left: leftLeg, right: rightLeg },
+    arms: { left: leftArm, right: rightArm },
+    head: headRig, torso, animTime: Math.random() * 5, animOffset: Math.random() * Math.PI * 2,
+    hitFlash: 0, recoil: 0
   };
   scene.add(enemy);
   enemies.push(enemy);
@@ -498,6 +756,8 @@ function registerHit(position, enemy, damageAmount) {
   enemy.userData.barFill.scale.x = Math.max(.001, ratio);
   enemy.userData.barFill.position.x = -.6 * (1 - ratio);
   addBurst(position, enemy.userData.type === 'gunner' ? 0xb99aff : 0xffa15a, .13);
+  enemy.userData.hitFlash = .16;
+  enemy.userData.recoil = .2;
   hitTimer = .12;
   $('hitmarker').classList.add('active');
   if (enemy.userData.hp <= 0) eliminateEnemy(enemy);
@@ -629,6 +889,7 @@ addEventListener('resize', () => {
 
 function tick(dt) {
   if (!started || gameOver) return;
+  animationClock += dt;
   invuln = Math.max(0, invuln - dt);
   dashCooldown = Math.max(0, dashCooldown - dt);
   if (reloadRemaining > 0) {
@@ -653,9 +914,11 @@ function tick(dt) {
   if (keys.KeyS) movement.z += 1;
   if (keys.KeyA) movement.x -= 1;
   if (keys.KeyD) movement.x += 1;
-  if (movement.lengthSq()) {
+  const playerMoving = movement.lengthSq() > 0;
+  const sprinting = playerMoving && !!keys.ShiftLeft;
+  if (playerMoving) {
     movement.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    player.position.addScaledVector(movement, dt * (keys.ShiftLeft ? 10 : 6));
+    player.position.addScaledVector(movement, dt * (sprinting ? 10 : 6));
   }
   player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
@@ -663,6 +926,17 @@ function tick(dt) {
   player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
   player.rotation.y = yaw;
+
+  const playerCycle = animationClock * (sprinting ? 13 : 9);
+  const playerStride = playerMoving ? (sprinting ? .82 : .56) : .025;
+  playerParts.leftLeg.hip.rotation.x = Math.sin(playerCycle) * playerStride;
+  playerParts.rightLeg.hip.rotation.x = -Math.sin(playerCycle) * playerStride;
+  playerParts.leftLeg.knee.rotation.x = Math.max(0, -Math.sin(playerCycle)) * .42;
+  playerParts.rightLeg.knee.rotation.x = Math.max(0, Math.sin(playerCycle)) * .42;
+  playerParts.leftArm.rotation.x = .38 - Math.sin(playerCycle) * playerStride * .28;
+  playerParts.rightArm.rotation.x = .38 + Math.sin(playerCycle) * playerStride * .28;
+  playerParts.torso.position.y = 1.3 + (playerMoving ? Math.abs(Math.sin(playerCycle)) * .025 : Math.sin(animationClock * 2) * .012);
+  playerParts.head.rotation.y = Math.sin(animationClock * 1.35) * .025;
 
   const cameraOffset = new THREE.Vector3(0, 4.1, 7.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
   camera.position.lerp(player.position.clone().add(cameraOffset), 1 - Math.pow(.001, dt));
@@ -688,6 +962,28 @@ function tick(dt) {
     const direction = toPlayer.clone().normalize();
     // Enemy meshes face local -Z, so invert the direction when calculating yaw.
     enemy.rotation.y = Math.atan2(-direction.x, -direction.z);
+    data.animTime += dt;
+    const enemyMoving = data.type === 'gunner'
+      ? Math.abs(distance - data.range) > 2
+      : distance > data.range;
+    const gait = enemyMoving ? Math.min(1, data.speed / 2.7) : .035;
+    const cycle = data.animTime * (data.type === 'scout' ? 12 : data.type === 'heavy' ? 5.5 : 7.5) + data.animOffset;
+    const stride = Math.sin(cycle) * gait * (data.type === 'scout' ? .72 : data.type === 'heavy' ? .34 : .46);
+    data.legs.left.upper.rotation.x = stride;
+    data.legs.right.upper.rotation.x = -stride;
+    data.legs.left.lower.rotation.x = Math.max(0, -stride) * .55;
+    data.legs.right.lower.rotation.x = Math.max(0, stride) * .55;
+    data.arms.left.upper.rotation.x = -stride * .42;
+    data.arms.right.upper.rotation.x = stride * .42 - data.recoil;
+    data.arms.left.lower.rotation.x = Math.max(0, stride) * .25;
+    data.arms.right.lower.rotation.x = Math.max(0, -stride) * .25;
+    data.torso.rotation.z = Math.sin(cycle * .5) * (enemyMoving ? .035 : .012);
+    data.head.rotation.x = Math.sin(cycle * .7) * .025;
+    data.recoil = Math.max(0, data.recoil - dt * 1.8);
+    if (data.hitFlash > 0) {
+      data.hitFlash = Math.max(0, data.hitFlash - dt);
+      data.shell.emissiveIntensity = 1.5 + (data.hitFlash / .16) * 2.4;
+    } else data.shell.emissiveIntensity = 1.5;
     data.cooldown -= dt;
     if (data.type === 'gunner') {
       if (distance > data.range + 2) enemy.position.addScaledVector(direction, data.speed * dt);
@@ -696,6 +992,7 @@ function tick(dt) {
         const from = enemy.position.clone().add(new THREE.Vector3(0, 1.25, 0));
         const to = player.position.clone().add(new THREE.Vector3(0, 1, 0));
         projectile(from, to.sub(from), true, data.damage, 17, 'orange');
+        data.recoil = .24;
         data.cooldown = data.attackRate;
       }
     } else if (distance > data.range) {
