@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow, graphicsPrompt, roadmap] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
   readFile('README.md', 'utf8'),
   readFile('.github/workflows/deploy.yml', 'utf8'),
   readFile('docs/GRAPHICS_MASTER_PROMPT.md', 'utf8'),
-  readFile('docs/ROADMAP.md', 'utf8')
+  readFile('docs/ROADMAP.md', 'utf8'),
+  readFile('docs/GRAPHICS_AUDIT.md', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -82,6 +83,26 @@ assert.match(roadmap, /## 0\.7 — Lighting and shadows/);
 assert.match(roadmap, /## 0\.8 — PBR materials and surface response/);
 assert.match(roadmap, /## 0\.9 — Character silhouette and armor detail/);
 assert.match(roadmap, /## 1\.3 — Performance and visual QA/);
+assert.ok(ids.includes('graphics-quality'), 'Graphics quality selector is missing');
+assert.ok(ids.includes('graphics-quality-note'), 'Graphics quality feedback is missing');
+assert.match(html, /<option value="low">LOW \/\/ PERFORMANCE<\/option>/);
+assert.match(html, /<option value="medium">MEDIUM \/\/ BALANCED<\/option>/);
+assert.match(html, /<option value="high">HIGH \/\/ DETAIL<\/option>/);
+assert.match(html, /<option value="ultra">ULTRA \/\/ MAXIMUM<\/option>/);
+assert.ok(js.includes('const GRAPHICS_QUALITY_PRESETS = Object.freeze({'), 'Graphics profiles are missing');
+assert.ok(js.includes('function getGraphicsPixelRatio(width, height)'), 'Pixel-budget calculation is missing');
+assert.ok(js.includes('function resizeRenderer()'), 'Coordinated renderer resize function is missing');
+assert.ok(js.includes('renderer.setPixelRatio(nextPixelRatio);'), 'Quality profile is not applied to the renderer');
+assert.ok(js.includes('renderer.setSize(width, height, false);'), 'Renderer must preserve CSS-controlled canvas sizing');
+assert.ok(js.includes('window.visualViewport?.addEventListener'), 'Visual viewport resize handling is missing');
+assert.ok(js.includes('new ResizeObserver(resizeRenderer)'), 'Container resize observation is missing');
+assert.ok(js.includes('graphicsQuality }')), 'Graphics quality is not persisted with settings');
+assert.match(css, /\.graphics-quality-control/);
+assert.match(readme, /## Graphics quality/);
+assert.match(readme, /Visual Build 1\.2/);
+assert.match(graphicsAudit, /No browser-rendered screenshot/);
+assert.match(graphicsAudit, /Runtime baseline limitations/);
+assert.ok(roadmap.includes('## 1.2 — Rendering pipeline and resolution'));
 assert.ok(js.includes('function buildPlayerLeg('));
 assert.ok(js.includes('playerParts.leftLeg.hip.rotation.x'));
 assert.ok(js.includes('function buildEnemyLimb('));
