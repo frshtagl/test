@@ -22,6 +22,14 @@ for (const id of ['game', 'start-button', 'restart-button', 'aim-toggle', 'fire-
 
 assert.match(html, /href=["']\.\/src\/styles\.css["']/);
 assert.match(html, /src=["']\.\/src\/main\.js["']/);
+assert.ok(html.includes('id="boot-error"'), 'Startup error feedback is missing');
+assert.ok(html.includes('window.__ARENA_ZERO_REGISTER_START__'), 'Early start-button bootstrap is missing');
+assert.ok(html.indexOf('window.__ARENA_ZERO_REGISTER_START__') < html.indexOf('src="./src/main.js"'), 'Start buttons must bind before the game module loads');
+assert.ok(js.includes('async function loadThreeModule()'), 'Three.js CDN fallback loader is missing');
+assert.ok(js.includes("https://unpkg.com/three@0.160.0/build/three.module.js"), 'Secondary Three.js CDN is missing');
+assert.ok(js.includes('window.__ARENA_ZERO_REGISTER_START__?.(start)'), 'Game start callback is not registered');
+assert.ok(js.includes("lockRequest.catch("), 'Pointer-lock rejection must not block deployment');
+assert.doesNotMatch(js, /\$\(['"]start-button['"]\)\.addEventListener\('click'/, 'Start click must not depend on late module initialization');
 assert.match(js, /camera\.getWorldDirection/);
 assert.ok(js.includes('const playerRig = new THREE.Group()'));
 assert.ok(js.includes('function buildPlayerArm('));
