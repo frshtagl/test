@@ -51,6 +51,18 @@
 - [ ] Audio and accessibility settings
 - [ ] Local leaderboard and run history
 
+## 0.6 — Environment visual upgrade
+- [x] Instanced industrial wall panels and structural ribs
+- [x] Upper/lower perimeter rails and recessed vent modules
+- [x] Recessed cyan wall fixtures and restrained orange warning markers
+- [x] Metallic armor trims on the four existing arena support pillars
+- [x] Reuse static geometry/materials and preserve existing gameplay collision layout
+- [ ] Lighting and shadow refinement
+- [ ] PBR material and surface-detail pass
+- [ ] Character, enemy and weapon visual refinement
+- [ ] Combat VFX and animation polish
+- [ ] Before/after visual and performance validation
+
 ## 0.5 — Online features
 - [ ] Evaluate authoritative server architecture
 - [ ] Co-op PvE prototype

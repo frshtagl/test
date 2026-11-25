@@ -70,6 +70,15 @@ const cyanMat = mat(0x24d8ed, .35, .4, 0x087b90);
 const orangeMat = mat(0xff7a43, .4, .3, 0x8a260c);
 const violetMat = mat(0xb58aff, .35, .3, 0x5426a8);
 
+// Shared materials for the industrial arena architecture pass.
+const architecturePanelMat = mat(0x20364a, .48, .78, 0x040a11);
+const architectureRibMat = mat(0x526d80, .36, .82, 0x07111a);
+const architectureRailMat = mat(0x304b60, .4, .8);
+const architectureVentMat = mat(0x091521, .82, .38);
+const architectureVentSlatMat = mat(0x6b8190, .42, .78);
+const architectureFixtureMat = mat(0x142a3c, .34, .76);
+const architectureWarningMat = mat(0xff9a55, .42, .38, 0x5a2109);
+
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), floorMat);
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
@@ -124,6 +133,32 @@ function box(parent, x, y, z, sx, sy, sz, material) {
   parent.add(mesh);
   return mesh;
 }
+
+// Reuse one unit box and one draw call per material for static architectural detail.
+// Decorative instances do not cast individual shadows; the arena's primary structure does.
+const architectureUnitBox = new THREE.BoxGeometry(1, 1, 1);
+function addInstancedBoxes(parent, material, entries, castShadow = false) {
+  if (!entries.length) return null;
+  const batch = new THREE.InstancedMesh(architectureUnitBox, material, entries.length);
+  const transform = new THREE.Object3D();
+  for (let index = 0; index < entries.length; index++) {
+    const item = entries[index];
+    transform.position.set(item.x, item.y, item.z);
+    transform.rotation.set(item.rx ?? 0, item.ry ?? 0, item.rz ?? 0);
+    transform.scale.set(item.sx, item.sy, item.sz);
+    transform.updateMatrix();
+    batch.setMatrixAt(index, transform.matrix);
+  }
+  batch.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+  batch.instanceMatrix.needsUpdate = true;
+  batch.castShadow = castShadow;
+  batch.receiveShadow = true;
+  batch.computeBoundingBox();
+  batch.computeBoundingSphere();
+  parent.add(batch);
+  return batch;
+}
+
 for (let i = -1; i <= 1; i += 2) {
   box(arena, i * 24, 3, 0, 1, 6, 50, wallMat);
   box(arena, 0, 3, i * 24, 50, 6, 1, wallMat);
@@ -159,6 +194,89 @@ for (let i = 0; i < 10; i++) {
     arenaColliders.push({ x, z, halfX: 1.1, halfZ: 1.1, centerY: .9, halfY: .9 });
   }
 }
+
+// Visual-only detail pass. All placements stay on the perimeter or existing pillars,
+// so the established player/enemy navigation and projectile collision layout is preserved.
+function buildArenaArchitectureDetails() {
+  const wallPanels = [];
+  const wallRibs = [];
+  const wallRails = [];
+  const ventBackplates = [];
+  const ventSlats = [];
+  const fixtureHousings = [];
+  const fixtureLenses = [];
+  const pillarEdgeTrims = [];
+  const warningMarkers = [];
+
+  for (const side of [-1, 1]) {
+    // Large recessed-looking wall panels, kept clear of the four arena corners.
+    for (let index = -4; index <= 4; index++) {
+      const offset = index * 4.55;
+      wallPanels.push({ x: side * 23.44, y: 2.95, z: offset, sx: .09, sy: 3.55, sz: 4.05 });
+      wallPanels.push({ x: offset, y: 2.95, z: side * 23.44, sx: 4.05, sy: 3.55, sz: .09 });
+    }
+
+    // Repeated vertical structural ribs create scale and a stronger industrial silhouette.
+    for (let index = -5; index <= 5; index++) {
+      const offset = index * 4.2;
+      wallRibs.push({ x: side * 23.32, y: 3, z: offset, sx: .18, sy: 5.25, sz: .24 });
+      wallRibs.push({ x: offset, y: 3, z: side * 23.32, sx: .24, sy: 5.25, sz: .18 });
+    }
+
+    // Continuous upper and lower rails visually tie the four walls together.
+    for (const y of [.72, 5.12]) {
+      wallRails.push({ x: side * 23.26, y, z: 0, sx: .14, sy: .16, sz: 46 });
+      wallRails.push({ x: 0, y, z: side * 23.26, sx: 46, sy: .16, sz: .14 });
+    }
+
+    // Dark vent recesses with five separated metallic slats in each module.
+    for (const offset of [-9.1, 9.1]) {
+      ventBackplates.push({ x: side * 23.25, y: 3, z: offset, sx: .07, sy: 1.55, sz: 2.15 });
+      ventBackplates.push({ x: offset, y: 3, z: side * 23.25, sx: 2.15, sy: 1.55, sz: .07 });
+      for (let slat = -2; slat <= 2; slat++) {
+        ventSlats.push({ x: side * 23.17, y: 3 + slat * .22, z: offset, sx: .045, sy: .055, sz: 1.78 });
+        ventSlats.push({ x: offset, y: 3 + slat * .22, z: side * 23.17, sx: 1.78, sy: .055, sz: .045 });
+      }
+    }
+
+    // Recessed light housings and narrow cyan lenses; emissive surfaces provide the glow.
+    for (const offset of [-16, -8, 0, 8, 16]) {
+      fixtureHousings.push({ x: side * 23.22, y: 4.48, z: offset, sx: .16, sy: .34, sz: 1.05 });
+      fixtureHousings.push({ x: offset, y: 4.48, z: side * 23.22, sx: 1.05, sy: .34, sz: .16 });
+      fixtureLenses.push({ x: side * 23.12, y: 4.48, z: offset, sx: .06, sy: .1, sz: .72 });
+      fixtureLenses.push({ x: offset, y: 4.48, z: side * 23.12, sx: .72, sy: .1, sz: .06 });
+    }
+
+    // Small orange warning modules at the lower wall corners.
+    for (const offset of [-20.8, 20.8]) {
+      warningMarkers.push({ x: side * 23.12, y: .92, z: offset, sx: .07, sy: .38, sz: .72 });
+      warningMarkers.push({ x: offset, y: .92, z: side * 23.12, sx: .72, sy: .38, sz: .07 });
+    }
+  }
+
+  // Four narrow armor strips on each of the existing central support pillars.
+  for (const [x, z] of [[17, 0], [-17, 0], [0, 17], [0, -17]]) {
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        pillarEdgeTrims.push({
+          x: x + sx * .91, y: 2.8, z: z + sz * .91,
+          sx: .085, sy: 5.35, sz: .085
+        });
+      }
+    }
+  }
+
+  addInstancedBoxes(arena, architecturePanelMat, wallPanels);
+  addInstancedBoxes(arena, architectureRibMat, wallRibs);
+  addInstancedBoxes(arena, architectureRailMat, wallRails);
+  addInstancedBoxes(arena, architectureVentMat, ventBackplates);
+  addInstancedBoxes(arena, architectureVentSlatMat, ventSlats);
+  addInstancedBoxes(arena, architectureFixtureMat, fixtureHousings);
+  addInstancedBoxes(arena, cyanMat, fixtureLenses);
+  addInstancedBoxes(arena, architectureRibMat, pillarEdgeTrims);
+  addInstancedBoxes(arena, architectureWarningMat, warningMarkers);
+}
+buildArenaArchitectureDetails();
 
 function resolveArenaCollisions(position, radius) {
   for (let pass = 0; pass < 2; pass++) {
