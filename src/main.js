@@ -53,6 +53,8 @@ function start(){started=true;gameOver=false;health=100;kills=0;wave=1;ammo=30;r
 $('start-button').addEventListener('click',start);$('restart-button').addEventListener('click',start);
 $('aim-toggle').addEventListener('change',e=>aimAssist=e.target.checked);$('fire-toggle').addEventListener('change',e=>autoFire=e.target.checked);$('aim-range').addEventListener('input',e=>{aimRange=+e.target.value;$('range-value').textContent=aimRange+'m';});
 renderer.domElement.addEventListener('click',()=>{if(started&&!gameOver&&document.pointerLockElement!==renderer.domElement)renderer.domElement.requestPointerLock();});
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.button===0)keys.Mouse0=true;});
+addEventListener('pointerup',e=>{if(e.button===0)keys.Mouse0=false;});
 addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyR')reload();if(e.code==='KeyT'){$('aim-toggle').click();}if(e.code==='KeyF'){$('fire-toggle').click();}if(e.code==='Space'&&started&&dashCooldown<=0){const d=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));player.position.addScaledVector(d,5);dashCooldown=2;invuln=.25;addBurst(player.position.clone().add(new THREE.Vector3(0,1,0)));}});
 addEventListener('keyup',e=>keys[e.code]=false);
 addEventListener('mousemove',e=>{if(document.pointerLockElement===renderer.domElement){yaw-=e.movementX*.0022;pitch=THREE.MathUtils.clamp(pitch-e.movementY*.0018,-.65,.35);}});
