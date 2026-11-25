@@ -30,7 +30,7 @@ assert.match(js, /resolveArenaCollisions/);
 assert.match(js, /dashImpact\.t/);
 assert.match(js, /target = nearestTarget\(\)/);
 assert.doesNotMatch(js, /target = aimAssist \? nearestTarget/);
-assert.match(js, /registerHit\(closest, enemy, shot\.damage\)/);
+assert.match(js, /registerHit\(hitPoint, hitEnemy, shot\.damage\)/);
 assert.match(js, /enemy\.rotation\.y = Math\.atan2\(-direction\.x, -direction\.z\)/);
 assert.doesNotMatch(js, /enemy\.userData\.hp -= 1/);
 assert.match(js, /disposeObject3D/);
