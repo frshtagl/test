@@ -14,7 +14,8 @@ for(const name of ['wall_terminal','floor_service_hatch','cover_barricade']){
  assert.equal(parsed.positions.length,item.triangles*9);assert.equal(parsed.normals.length,item.triangles*9);
  for(let i=0;i<6;i++)assert.ok(Math.abs(parsed.bounds[i]-item.bounds[i])<.0001,`${name} bounds mismatch`);
 }
-assert.equal(manifest.assets.cover_barricade.collision_proxy_in_game,false);
+assert.equal(manifest.assets.cover_barricade.collision_proxy_in_game,true);
 assert.equal(manifest.assets.cover_barricade.collision_proxy_required,true);
+assert.match(manifest.assets.cover_barricade.notes,/rotated AABB collision proxy/);
 assert.throws(()=>parseBinarySTL(new ArrayBuffer(12)),/truncated/);
 console.log('ARENA ZERO VTK asset validation passed for 3 generated meshes.');
