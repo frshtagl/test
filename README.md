@@ -45,16 +45,24 @@ Switching weapons cancels the current reload but preserves each weapon's remaini
 
 Best elimination score and combat-assist settings are stored in browser local storage on the current device.
 
-## GitHub Pages
+## GitHub Pages deployment
 
-The deployment workflow attempts to enable GitHub Pages automatically. If GitHub rejects that step, open repository Settings → Pages and select GitHub Actions as the build and deployment source.
+The GitHub Actions token cannot enable Pages for this repository automatically yet. Enable it once:
+
+1. Open repository Settings → Pages.
+2. Under Build and deployment, set Source to GitHub Actions.
+3. Open Actions → Deploy ARENA ZERO to GitHub Pages.
+4. Select Run workflow.
+
+After Pages is enabled, use Run workflow whenever you want to publish a new build.
 
 ## Project structure
 
 - index.html — application shell and HUD
 - src/main.js — Three.js scene, controls, enemy AI, combat and game loop
 - src/styles.css — interface and responsive styling
-- .github/workflows/deploy.yml — GitHub Pages deployment and validation
+- .github/workflows/quality.yml — syntax and integration checks on every push
+- .github/workflows/deploy.yml — manual GitHub Pages deployment
 - scripts/smoke-check.mjs — static integration checks
 - docs/ROADMAP.md — development milestones
 
