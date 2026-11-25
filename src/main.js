@@ -1420,6 +1420,7 @@ function nearestTarget() {
   return best;
 }
 function shoot() {
+  // Fire cadence remains def.rate / runModifiers.fireRate and is enforced by the weapon state module.
   const def=weapons[currentWeapon],shotTime=performance.now();
   if(!canFireWeapon(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate)||!consumeWeaponRound(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate))return;
   recoilPitch = Math.min(.18, recoilPitch + def.recoil * (keys.Mouse2 ? .72 : 1));
