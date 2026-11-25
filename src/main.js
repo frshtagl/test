@@ -591,17 +591,30 @@ function buildArenaArchitectureDetails() {
 }
 buildArenaArchitectureDetails();
 
+const vtkGeometryCache = new Map();
+async function loadVTKGeometry(relativePath) {
+  if (!vtkGeometryCache.has(relativePath)) {
+    const loading = (async () => {
+      const response = await fetch(new URL(relativePath, document.baseURI));
+      if (!response.ok) throw new Error('VTK asset request failed: ' + relativePath + ' (' + response.status + ')');
+      if (typeof DecompressionStream === 'undefined') throw new Error('This browser does not support gzip decompression.');
+      const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
+      const buffer = await new Response(stream).arrayBuffer();
+      const parsed = parseBinarySTL(buffer);
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(parsed.positions, 3));
+      geometry.setAttribute('normal', new THREE.BufferAttribute(parsed.normals, 3));
+      geometry.computeBoundingSphere();
+      return geometry;
+    })();
+    vtkGeometryCache.set(relativePath, loading);
+    loading.catch(() => vtkGeometryCache.delete(relativePath));
+  }
+  return vtkGeometryCache.get(relativePath);
+}
+
 async function loadVTKStaticMesh(relativePath, material, position, rotation = [0, 0, 0]) {
-  const response = await fetch(new URL(relativePath, document.baseURI));
-  if (!response.ok) throw new Error('VTK asset request failed: ' + relativePath + ' (' + response.status + ')');
-  if (typeof DecompressionStream === 'undefined') throw new Error('This browser does not support gzip decompression.');
-  const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
-  const buffer = await new Response(stream).arrayBuffer();
-  const parsed = parseBinarySTL(buffer);
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(parsed.positions, 3));
-  geometry.setAttribute('normal', new THREE.BufferAttribute(parsed.normals, 3));
-  geometry.computeBoundingSphere();
+  const geometry = await loadVTKGeometry(relativePath);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(position[0], position[1], position[2]);
   mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
@@ -1725,6 +1738,14 @@ addEventListener('mousemove', event => {
   if (document.pointerLockElement === renderer.domElement && !paused) {
     yaw -= event.movementX * .0022 * mouseSensitivity;
     pitch = THREE.MathUtils.clamp(pitch - event.movementY * .0018 * mouseSensitivity, -1.48, 1.48);
+  }
+});
+let hasHadPointerLock = false;
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement === renderer.domElement) {
+    hasHadPointerLock = true;
+  } else if (hasHadPointerLock && started && !gameOver && !intermission && !paused) {
+    pauseGame();
   }
 });
 document.addEventListener('visibilitychange', () => {

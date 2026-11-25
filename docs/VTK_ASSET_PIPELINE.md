@@ -25,3 +25,8 @@ VTK.js is primarily a browser scientific-visualization toolkit. It is useful for
 
 ## Asset policy
 STL is geometry-only: no UVs, textures, skeletons or animation. Rigged characters, animated weapons and textured assets should use Blender/DCC glTF/GLB. Keep render geometry separate from simple collision proxies. Never add collision cover before AI navigation and projectile occlusion are tested. Never use high-detail render geometry as a player collider.
+
+
+## Runtime efficiency
+
+The runtime caches the parsed BufferGeometry per asset path. Multiple wall-terminal and floor-hatch instances share one geometry each; per-instance transforms remain separate. This avoids repeating network requests, gzip decompression and vertex-buffer allocation for repeated props.

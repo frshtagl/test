@@ -148,6 +148,7 @@ assert.match(html, /type="checkbox"><i><\/i>/);
 assert.ok(js.includes("import { parseBinarySTL } from './assets/binary-stl.mjs'"), 'VTK STL parser import is missing');
 assert.ok(js.includes("import { createFpsControllerState, resetFpsControllerState, stepFpsController } from './gameplay/fps-controller.mjs'"), 'FPS controller import is missing');
 assert.ok(js.includes('function loadVTKStaticMesh('), 'VTK runtime loader is missing');
+assert.ok(js.includes('const vtkGeometryCache = new Map()'), 'VTK geometry must be shared across prop instances');
 assert.ok(js.includes('loadVTKEnvironmentAssets()'), 'VTK props are not scheduled for loading');
 assert.ok(js.includes('stepFpsController(fpsMotion'), 'FPS movement state is not integrated');
 assert.ok(js.includes('camera.rotation.set('), 'First-person camera rotation is missing');
