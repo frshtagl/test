@@ -11,7 +11,7 @@ All dimensions are metres in a right-handed, +Y-up coordinate system. The manife
 
 ## Functional barricade integration
 - Up to four barricades are placed in available positions around the arena centre. Candidate positions are checked against existing crates and pillars to avoid overlapping props.
-- A synchronous procedural Three.js fallback is created with its collision proxy before gameplay begins. If the compressed STL cannot load, the fallback remains visible and fully playable.
+- A synchronous procedural Three.js fallback is created with its collision proxy before gameplay begins. If the compressed STL cannot load, the procedural fallback remains active, visible and fully playable.
 - When the VTK mesh loads, it replaces only the fallback render mesh; the same collision proxy remains in place.
 - The proxy is a conservative rotated AABB derived from the source dimensions. It is used by player/enemy movement, the A* navigation grid, line-of-sight checks, hitscan and travelling projectiles. The high-detail STL mesh is never used as a physics collider.
 - Gunners seek visible firing angles; Scouts and Heavies favour visible flank destinations. Their pathfinding routes around the barricades instead of passing through them.
