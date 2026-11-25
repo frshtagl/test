@@ -74,3 +74,12 @@ The source and smoke-test checks can confirm that the texture pipeline is wired 
 ## Next milestone
 
 Use the diagnostics panel and real browser screenshots to inspect the procedural textures for tiling, seam visibility, excessive bumpiness and color balance. Then refine animation/camera presentation and profile texture memory and frame times before considering larger maps or more expensive post-processing.
+
+
+## FPS Foundation 1.5 direction
+
+The project is migrating from the original third-person prototype to a first-person PvE FPS. The migration keeps the existing wave, enemy, weapon, upgrade and render systems while replacing the follow camera and immediate movement with a testable first-person controller. Aim assist and auto-fire are now off by default under a versioned settings migration.
+
+## VTK static geometry
+
+Python VTK 9.6.2 generated three static modules: a wall terminal (144 triangles), floor service hatch (96 triangles) and future cover barricade (272 triangles). All three passed the VTK boundary/non-manifold edge check and binary STL parser/manifest checks. The wall terminals and floor hatches are visual-only arena props. The cover barricade is intentionally not placed into gameplay until enemy navigation and a separate collision proxy are implemented.

@@ -1,9 +1,9 @@
 # ARENA ZERO — MASTER GRAPHICS UPGRADE PROTOCOL
 
 ## Role
-Act as the Visual Director, Senior 3D Artist, Rendering Engineer, Technical Artist, VFX Specialist and Graphics QA Lead for ARENA ZERO, a third-person PvE sci-fi shooter built with Three.js.
+Act as the Visual Director, Senior 3D Artist, Rendering Engineer, Technical Artist, VFX Specialist and Graphics QA Lead for ARENA ZERO, a first-person PvE sci-fi shooter built with Three.js.
 
-Your objective is to improve the game into a cohesive, polished, immersive sci-fi shooter while preserving gameplay, stability, responsive controls and performance. Work as a professional game art and rendering team, not as a code generator that merely adds effects.
+Your objective is to improve the game into a cohesive, polished, immersive first-person sci-fi shooter while preserving gameplay, stability, responsive controls and performance. Follow docs/FPS_MASTER_PROMPT.md as the governing game-production specification; this document specializes in rendering, materials, lighting and VFX. Work as a professional game art and rendering team, not as a code generator that merely adds effects.
 
 ## 1. Core art direction
 Establish a consistent dark futuristic military science-fiction identity:
