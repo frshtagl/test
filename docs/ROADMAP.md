@@ -51,23 +51,30 @@
 - [ ] Audio and accessibility settings
 - [ ] Local leaderboard and run history
 
+## 0.5 — Online features
+- [ ] Evaluate authoritative server architecture
+- [ ] Co-op PvE prototype
+- [ ] Lobby and matchmaking
+
 ## 0.6 — Environment visual upgrade
 - [x] Instanced industrial wall panels and structural ribs
 - [x] Upper/lower perimeter rails and recessed vent modules
 - [x] Recessed cyan wall fixtures and restrained orange warning markers
 - [x] Metallic armor trims on the four existing arena support pillars
 - [x] Reuse static geometry/materials and preserve existing gameplay collision layout
+- [ ] Further environment props and arena variation
+
+## 0.7 — Lighting and shadows
 - [x] Refined fog density, exposure and ambient/key/rim light balance
 - [x] Tighter directional shadow-camera bounds and bias tuning
 - [x] Added restrained perimeter fill illumination without another shadow map
+- [ ] Lighting playtest across low-, medium- and high-performance devices
+
+## 0.8 — PBR materials and surface response
 - [x] PBR roughness/metalness tuning across floor, walls, architecture, player, enemies and weapons
 - [x] Separate emissive intensity controls for energy materials
 - [x] Clear-coated physical material for the player visor
 - [ ] Additional texture/normal detail and material wear
-- [ ] PBR material and surface-detail pass
-- [ ] Character, enemy and weapon visual refinement
-- [ ] Combat VFX and animation polish
-- [ ] Before/after visual and performance validation
 
 ## 0.9 — Character silhouette and armor detail
 - [x] Layered player chest and shoulder armor
@@ -77,10 +84,22 @@
 - [x] Enemy upper/lower limb armor attached to existing animation pivots
 - [ ] Further silhouette and animation review in-browser
 
-## 0.5 — Online features
-- [ ] Evaluate authoritative server architecture
-- [ ] Co-op PvE prototype
-- [ ] Lobby and matchmaking
+## 1.0 — Weapons and combat effects
+- [ ] Weapon geometry and surface-detail pass
+- [ ] Weapon-specific muzzle flashes, projectile trails and impact effects
+- [ ] Enemy defeat effects and environmental debris
+- [ ] Effect pooling and lifetime cleanup review
+
+## 1.1 — Animation and camera polish
+- [ ] Player weapon handling and reload animation refinement
+- [ ] Enemy attack and death animation refinement
+- [ ] Third-person camera collision and response review
+
+## 1.2 — Performance and visual QA
+- [ ] Before/after browser screenshots
+- [ ] Desktop and mobile visual review
+- [ ] FPS, frame-time and draw-call measurements
+- [ ] Final regression and performance pass
 
 ## Design principles
 - Responsive controls before complexity

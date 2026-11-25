@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow, graphicsPrompt] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt, roadmap] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
   readFile('README.md', 'utf8'),
   readFile('.github/workflows/deploy.yml', 'utf8'),
-  readFile('docs/GRAPHICS_MASTER_PROMPT.md', 'utf8')
+  readFile('docs/GRAPHICS_MASTER_PROMPT.md', 'utf8'),
+  readFile('docs/ROADMAP.md', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -63,6 +64,11 @@ assert.ok(js.includes('const enemyChestPlate = new THREE.Mesh('), 'Enemy chest a
 assert.ok(js.includes('const upperArmor = new THREE.Mesh('), 'Enemy upper-limb armor is missing');
 assert.ok(js.includes('const lowerArmor = new THREE.Mesh('), 'Enemy lower-limb armor is missing');
 assert.match(readme, /Visual Build 0\.9/);
+assert.match(roadmap, /## 0\.6 — Environment visual upgrade/);
+assert.match(roadmap, /## 0\.7 — Lighting and shadows/);
+assert.match(roadmap, /## 0\.8 — PBR materials and surface response/);
+assert.match(roadmap, /## 0\.9 — Character silhouette and armor detail/);
+assert.match(roadmap, /## 1\.2 — Performance and visual QA/);
 assert.ok(js.includes('function buildPlayerLeg('));
 assert.ok(js.includes('playerParts.leftLeg.hip.rotation.x'));
 assert.ok(js.includes('function buildEnemyLimb('));
