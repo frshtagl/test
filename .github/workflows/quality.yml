@@ -21,5 +21,7 @@ jobs:
         run: node scripts/smoke-check.mjs
       - name: Test FPS movement controller
         run: node scripts/fps-controller-test.mjs
+      - name: Test weapon state machine
+        run: node scripts/weapon-system-test.mjs
       - name: Validate generated VTK meshes
         run: node scripts/vtk-asset-test.mjs

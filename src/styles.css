@@ -548,3 +548,5 @@ button.upgrade-option:hover {
   .controls-panel span:nth-child(n+3) { display: none; }
   .stamina-bar { margin-top: 5px; }
 }
+
+.ammo-number .ammo-reserve{display:block;margin-top:2px;color:#8499ad;font:600 7px Orbitron,sans-serif;font-style:normal;letter-spacing:1.1px}

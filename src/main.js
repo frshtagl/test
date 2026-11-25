@@ -1,5 +1,6 @@
 import { parseBinarySTL } from './assets/binary-stl.mjs';
 import { createFpsControllerState, resetFpsControllerState, stepFpsController } from './gameplay/fps-controller.mjs';
+import {createWeaponSystem,canFireWeapon,consumeWeaponRound,beginWeaponReload,cancelWeaponReload,requestWeaponSwap,stepWeaponSystem,setWeaponCapacity,resetWeaponSystem} from './gameplay/weapon-system.mjs';
 
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
@@ -846,8 +847,9 @@ const weapons = {
   shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, speed: 48, recoil: .052, adsFov: 62, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
   precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, speed: 95, recoil: .038, adsFov: 43, color: 0xb99aff, description: 'HIGH IMPACT // SLOW FIRE' }
 };
-const magazines = { rifle: 30, shotgun: 8, precision: 6 };
-let currentWeapon = 'rifle';
+const weaponSystem=createWeaponSystem(weapons);
+const magazines=weaponSystem.magazines;
+let currentWeapon=weaponSystem.activeId;
 function buildWeaponVisual() {
   disposeObject3D(gunGroup);
   gunGroup.clear();
@@ -957,20 +959,16 @@ function buildWeaponVisual() {
   updateAmmoHUD();
 }
 function switchWeapon(id) {
-  if (!weapons[id] || currentWeapon === id) return;
-  // Switching weapons cancels the current reload but preserves each magazine.
-  reloading = false;
-  reloadRemaining = 0;
-  currentWeapon = id;
-  buildWeaponVisual();
-  showToast('LOADOUT // ' + weapons[id].name);
+  if (!weapons[id] || currentWeapon===id || weaponSystem.status==='swapping') return;
+  if(weaponSystem.status==='reloading')cancelWeaponReload(weaponSystem);
+  if(requestWeaponSwap(weaponSystem,id))showToast('SWAPPING // '+weapons[id].name);
 }
 let keys = {};
 let yaw = 0, pitch = 0, started = false, gameOver = false;
 let aimAssist = false, autoFire = false, aimRange = 24;
 let mouseSensitivity = 1.0, fieldOfView = 82;
 let health = 100, kills = 0, wave = 1, bestKills = 0;
-let reloading = false, reloadRemaining = 0, lastShot = 0;
+
 let dashCooldown = 0, invuln = 0, spawnTimer = 0, spawnCooldown = 0;
 let toastTimer = 0, hitTimer = 0, damageFlashTimer = 0, target = null;
 let spawnQueue = 0, animationClock = 0;
@@ -1077,9 +1075,9 @@ function showToast(message) {
   toastTimer = 2.3;
 }
 function updateAmmoHUD() {
-  const capacity = magazineSize(currentWeapon);
-  $('ammo').innerHTML = magazines[currentWeapon] + '<span> / ' + capacity + '</span>';
-  $('reload-label').textContent = reloading ? 'RELOADING' : 'READY';
+  const capacity=magazineSize(currentWeapon);
+  $('ammo').innerHTML=magazines[currentWeapon]+'<span> / '+capacity+'</span><em class="ammo-reserve">'+weaponSystem.reserves[currentWeapon]+' RESERVE</em>';
+  $('reload-label').textContent=weaponSystem.status==='reloading'?'RELOADING':weaponSystem.status==='swapping'?'SWAPPING':weaponSystem.status==='firing'?'FIRING':magazines[currentWeapon]===0?'EMPTY':'READY';
 }
 function updateHUD() {
   $('kills').textContent = String(kills).padStart(3, '0');
@@ -1422,12 +1420,9 @@ function nearestTarget() {
   return best;
 }
 function shoot() {
-  const def = weapons[currentWeapon];
-  const fireDelay = def.rate / runModifiers.fireRate;
-  if (magazines[currentWeapon] <= 0 || reloading || performance.now() - lastShot < fireDelay) return;
-  lastShot = performance.now();
-  recoilPitch = Math.min(.18, recoilPitch + def.recoil * (keys.Mouse2 ? .72 : 1));
-  magazines[currentWeapon]--;
+  const def=weapons[currentWeapon],shotTime=performance.now();
+  if(!canFireWeapon(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate)||!consumeWeaponRound(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate))return;
+  recoilPitch=Math.min(.18,recoilPitch+def.recoil*(keys.Mouse2?.72:1));
   const origin = new THREE.Vector3();
   muzzle.getWorldPosition(origin);
   let baseDirection;
@@ -1451,11 +1446,7 @@ function shoot() {
   updateAmmoHUD();
 }
 function reload() {
-  const def = weapons[currentWeapon];
-  if (reloading || magazines[currentWeapon] === magazineSize(currentWeapon)) return;
-  reloading = true;
-  reloadRemaining = def.reload / 1000 / runModifiers.reloadSpeed;
-  updateAmmoHUD();
+  if(beginWeaponReload(weaponSystem,currentWeapon,magazineSize(currentWeapon),runModifiers.reloadSpeed))updateAmmoHUD();
 }
 function damage(amount) {
   if (invuln > 0 || gameOver) return;
@@ -1577,15 +1568,12 @@ function start() {
   $('upgrade-screen').classList.add('hidden');
   kills = 0;
   wave = 1;
-  magazines.rifle = magazineSize('rifle');
-  magazines.shotgun = magazineSize('shotgun');
-  magazines.precision = magazineSize('precision');
-  reloading = false;
-  reloadRemaining = 0;
+  resetWeaponSystem(weaponSystem);
+  for(const id of Object.keys(weapons))setWeaponCapacity(weaponSystem,id,magazineSize(id),true);
+  currentWeapon=weaponSystem.activeId;
   spawnTimer = 0;
   spawnCooldown = 0;
   spawnQueue = 0;
-  lastShot = 0;
   dashCooldown = 0;
   invuln = 0;
   target = null;
@@ -1785,14 +1773,9 @@ function tick(dt) {
   animationClock += dt;
   invuln = Math.max(0, invuln - dt);
   dashCooldown = Math.max(0, dashCooldown - dt);
-  if (reloadRemaining > 0) {
-    reloadRemaining -= dt;
-    if (reloadRemaining <= 0) {
-      magazines[currentWeapon] = magazineSize(currentWeapon);
-      reloading = false;
-      updateAmmoHUD();
-    }
-  }
+  const weaponStep=stepWeaponSystem(weaponSystem,dt);
+  if(weaponStep.swappedTo){currentWeapon=weaponStep.swappedTo;buildWeaponVisual();}
+  else if(weaponStep.reloaded)updateAmmoHUD();
   if (spawnQueue > 0) {
     spawnCooldown -= dt;
     if (spawnCooldown <= 0) {
@@ -1998,7 +1981,7 @@ function tick(dt) {
     damageFlashTimer -= dt;
     if (damageFlashTimer <= 0) $('damage-flash').classList.remove('active');
   }
-  if (magazines[currentWeapon] === 0 && !reloading) reload();
+  if(magazines[currentWeapon]===0&&weaponSystem.reserves[currentWeapon]>0&&weaponSystem.status!=='reloading'&&weaponSystem.status!=='swapping')reload();
 }
 
 buildWeaponVisual();
