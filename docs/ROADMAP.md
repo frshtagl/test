@@ -203,7 +203,18 @@
 - [ ] Reduced-motion option and control remapping
 - [ ] Additional arena layouts, hazards and deterministic wave composition
 
-## 2.1 — Performance and release QA
+## 2.1 — Combat intelligence and environmental interaction
+- [x] Weapon-specific cover damage profiles for rifle, shotgun pellets, precision fire and hostile projectiles
+- [x] Apply player damage upgrades to environmental cover damage
+- [x] Group wave spawns into four-member tactical squads with Scout flank, Gunner support and Heavy anchor roles
+- [x] Relay newly observed player positions to squadmates and invalidate stale routes
+- [x] Add same-squad separation steering to reduce ally crowding
+- [x] Bias A* tactical destinations using assigned squad roles
+- [x] Add camera-relative threat direction indicator for approaching projectiles and active attack wind-ups
+- [x] Add regression suites for weapon cover damage, squad behavior and threat direction
+- [ ] Browser playtest of squad behavior, directional warning readability and weapon/environment balance
+
+## 2.2 — Performance and release QA
 - [ ] Before/after browser screenshots
 - [ ] Desktop and compact viewport review
 - [ ] FPS and frame-time p50/p95 per graphics preset
