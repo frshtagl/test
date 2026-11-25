@@ -1,5 +1,7 @@
 import { parseBinarySTL } from './assets/binary-stl.mjs';
 import { createFpsControllerState, resetFpsControllerState, stepFpsController } from './gameplay/fps-controller.mjs';
+import { WeaponStateMachine } from './combat/weapon-state.mjs';
+import { raySphereIntersection, segmentAabbIntersection } from './combat/hitscan.mjs';
 
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
@@ -842,11 +844,10 @@ const fpsMotion = createFpsControllerState();
 let jumpPressed = false, slidePressed = false, recoilPitch = 0, paused = false;
 
 const weapons = {
-  rifle: { name: 'ARC RIFLE', short: 'RIFLE', mag: 30, damage: 29, rate: 145, reload: 1200, pellets: 1, spread: .012, speed: 64, recoil: .014, adsFov: 58, color: 0x50e6f2, description: 'CONTROLLED // FULL AUTO' },
-  shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, speed: 48, recoil: .052, adsFov: 62, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
-  precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, speed: 95, recoil: .038, adsFov: 43, color: 0xb99aff, description: 'HIGH IMPACT // SLOW FIRE' }
+  rifle: { name: 'ARC RIFLE', short: 'RIFLE', mag: 30, damage: 29, rate: 145, reload: 1200, pellets: 1, spread: .012, speed: 64, range: 68, fireMode: 'hitscan', recoil: .014, adsFov: 58, color: 0x50e6f2, description: 'CONTROLLED // FULL AUTO' },
+  shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, speed: 48, range: 28, fireMode: 'pellet', recoil: .052, adsFov: 62, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
+  precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, speed: 95, range: 95, fireMode: 'hitscan', recoil: .038, adsFov: 43, color: 0xb99aff, description: 'HIGH IMPACT // WEAKPOINT' }
 };
-const magazines = { rifle: 30, shotgun: 8, precision: 6 };
 let currentWeapon = 'rifle';
 function buildWeaponVisual() {
   disposeObject3D(gunGroup);
@@ -958,19 +959,15 @@ function buildWeaponVisual() {
 }
 function switchWeapon(id) {
   if (!weapons[id] || currentWeapon === id) return;
-  // Switching weapons cancels the current reload but preserves each magazine.
-  reloading = false;
-  reloadRemaining = 0;
-  currentWeapon = id;
-  buildWeaponVisual();
-  showToast('LOADOUT // ' + weapons[id].name);
+  if (!weaponMachine.requestSwitch(id)) return;
+  updateAmmoHUD();
+  showToast('SWAPPING // ' + weapons[id].name);
 }
 let keys = {};
 let yaw = 0, pitch = 0, started = false, gameOver = false;
 let aimAssist = false, autoFire = false, aimRange = 24;
 let mouseSensitivity = 1.0, fieldOfView = 82;
 let health = 100, kills = 0, wave = 1, bestKills = 0;
-let reloading = false, reloadRemaining = 0, lastShot = 0;
 let dashCooldown = 0, invuln = 0, spawnTimer = 0, spawnCooldown = 0;
 let toastTimer = 0, hitTimer = 0, damageFlashTimer = 0, target = null;
 let spawnQueue = 0, animationClock = 0;
@@ -978,11 +975,18 @@ const enemies = [], shots = [], effects = [];
 let intermission = false, upgradesTaken = 0, upgradeChoices = [];
 let maxHealth = 100;
 const runModifiers = { damage: 1, fireRate: 1, reloadSpeed: 1, moveSpeed: 1, magazine: 1 };
+const weaponMachine = new WeaponStateMachine(
+  weapons,
+  { rifle: 120, shotgun: 32, precision: 24 },
+  id => Math.ceil(weapons[id].mag * runModifiers.magazine)
+);
+const magazines = weaponMachine.magazines;
+const reserves = weaponMachine.reserves;
 const upgradePool = [
   { id: 'overclock', name: 'OVERCLOCKED CORE', tag: 'OFFENSIVE SYSTEM', description: '+18% weapon damage', apply: () => { runModifiers.damage *= 1.18; } },
   { id: 'rapid-cycle', name: 'RAPID CYCLING', tag: 'WEAPON CONTROL', description: '+14% fire rate', apply: () => { runModifiers.fireRate *= 1.14; } },
   { id: 'reinforced', name: 'REINFORCED PLATING', tag: 'SURVIVABILITY', description: '+25 maximum health and restore 25', apply: () => { maxHealth += 25; health = Math.min(maxHealth, health + 25); } },
-  { id: 'quick-mag', name: 'EXPANDED MAGAZINES', tag: 'AMMUNITION', description: '+18% magazine capacity and refill all weapons', apply: () => { runModifiers.magazine *= 1.18; for (const id of Object.keys(weapons)) magazines[id] = magazineSize(id); } },
+  { id: 'quick-mag', name: 'EXPANDED MAGAZINES', tag: 'AMMUNITION', description: '+18% magazine capacity and refill all weapons', apply: () => { runModifiers.magazine *= 1.18; weaponMachine.refillMagazines(); } },
   { id: 'kinetic', name: 'KINETIC SERVOS', tag: 'MOBILITY', description: '+12% movement speed', apply: () => { runModifiers.moveSpeed *= 1.12; } },
   { id: 'field-loader', name: 'FIELD LOADER', tag: 'RELOAD SYSTEM', description: '+20% reload speed and restore 10 health', apply: () => { runModifiers.reloadSpeed *= 1.2; health = Math.min(maxHealth, health + 10); } }
 ];
@@ -1079,7 +1083,9 @@ function showToast(message) {
 function updateAmmoHUD() {
   const capacity = magazineSize(currentWeapon);
   $('ammo').innerHTML = magazines[currentWeapon] + '<span> / ' + capacity + '</span>';
-  $('reload-label').textContent = reloading ? 'RELOADING' : 'READY';
+  $('reserve-ammo').textContent = String(reserves[currentWeapon]);
+  const stateLabels = { ready: 'READY', firing: 'FIRING', reloading: 'RELOADING', swapping: 'SWAPPING' };
+  $('reload-label').textContent = stateLabels[weaponMachine.mode] || 'READY';
 }
 function updateHUD() {
   $('kills').textContent = String(kills).padStart(3, '0');
@@ -1355,34 +1361,14 @@ function segmentParameter(point, start, end) {
 
 function segmentObstacleHit(start, end) {
   let nearest = null;
-  let nearestT = Infinity;
   for (const obstacle of arenaColliders) {
-    const bounds = [
-      ['x', obstacle.x - obstacle.halfX, obstacle.x + obstacle.halfX],
-      ['y', obstacle.centerY - obstacle.halfY, obstacle.centerY + obstacle.halfY],
-      ['z', obstacle.z - obstacle.halfZ, obstacle.z + obstacle.halfZ]
-    ];
-    let tMin = 0;
-    let tMax = 1;
-    for (const [axis, min, max] of bounds) {
-      const delta = end[axis] - start[axis];
-      if (Math.abs(delta) < 1e-8) {
-        if (start[axis] < min || start[axis] > max) {
-          tMin = Infinity;
-          break;
-        }
-        continue;
-      }
-      let t1 = (min - start[axis]) / delta;
-      let t2 = (max - start[axis]) / delta;
-      if (t1 > t2) [t1, t2] = [t2, t1];
-      tMin = Math.max(tMin, t1);
-      tMax = Math.min(tMax, t2);
-      if (tMin > tMax) break;
-    }
-    if (tMin <= tMax && tMin >= 0 && tMin < nearestT) {
-      nearestT = tMin;
-      nearest = { point: start.clone().lerp(end, tMin), t: tMin };
+    const hit = segmentAabbIntersection(start, end, {
+      minX: obstacle.x - obstacle.halfX, maxX: obstacle.x + obstacle.halfX,
+      minY: obstacle.centerY - obstacle.halfY, maxY: obstacle.centerY + obstacle.halfY,
+      minZ: obstacle.z - obstacle.halfZ, maxZ: obstacle.z + obstacle.halfZ
+    });
+    if (hit && (!nearest || hit.t < nearest.t)) {
+      nearest = { t: hit.t, point: new THREE.Vector3(hit.point.x, hit.point.y, hit.point.z) };
     }
   }
   return nearest;
@@ -1421,13 +1407,65 @@ function nearestTarget() {
   }
   return best;
 }
+let shotSequence = 0;
+function addTracer(start, end, color) {
+  const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+  const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: .82, depthWrite: false, toneMapped: false });
+  const line = new THREE.Line(geometry, material);
+  scene.add(line);
+  effects.push({ mesh: line, life: .065, max: .065, kind: 'tracer' });
+}
+
+function traceHitscan(origin, direction, damageAmount, range, color, weaponId) {
+  const rayDirection = direction.clone().normalize();
+  const end = origin.clone().addScaledVector(rayDirection, range);
+  const obstacleImpact = segmentObstacleHit(origin, end);
+  let nearestDistance = obstacleImpact ? obstacleImpact.t * range : range;
+  let hitEnemy = null;
+  let hitPoint = null;
+  for (const enemy of enemies) {
+    const center = enemy.position.clone().add(new THREE.Vector3(0, 1.1 * enemy.scale.y, 0));
+    const intersection = raySphereIntersection(origin, rayDirection, center, enemy.userData.radius, nearestDistance);
+    if (intersection && intersection.distance < nearestDistance) {
+      nearestDistance = intersection.distance;
+      hitEnemy = enemy;
+      hitPoint = new THREE.Vector3(intersection.point.x, intersection.point.y, intersection.point.z);
+    }
+  }
+  let impactPoint = end;
+  if (hitEnemy) {
+    const weakpoint = weaponId === 'precision' && hitPoint.y > hitEnemy.position.y + 1.45 * hitEnemy.scale.y;
+    registerHit(hitPoint, hitEnemy, damageAmount * (weakpoint ? 1.5 : 1));
+    impactPoint = hitPoint;
+    if (weakpoint) showToast('WEAKPOINT // CRITICAL HIT');
+  } else if (obstacleImpact) {
+    addBurst(obstacleImpact.point, 0x8ba6ba, .085);
+    impactPoint = obstacleImpact.point;
+  }
+  addTracer(origin, impactPoint, color);
+  return { hit: Boolean(hitEnemy), enemy: hitEnemy, point: impactPoint };
+}
+
+function spreadDirection(baseDirection, spread, pelletIndex, pelletCount, sequence) {
+  const referenceUp = Math.abs(baseDirection.y) > .96 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(baseDirection, referenceUp).normalize();
+  const up = new THREE.Vector3().crossVectors(right, baseDirection).normalize();
+  const radius = spread * Math.sqrt((pelletIndex + .5) / pelletCount);
+  const angle = sequence * 2.399963229728653 + pelletIndex * 2.399963229728653;
+  return baseDirection.clone().addScaledVector(right, Math.cos(angle) * radius).addScaledVector(up, Math.sin(angle) * radius).normalize();
+}
+
 function shoot() {
+  const result = weaponMachine.tryFire(performance.now(), runModifiers.fireRate);
+  if (!result.ok) {
+    if (result.reason === 'empty') {
+      if (result.canReload) reload();
+      else showToast('MAGAZINE EMPTY // NO RESERVE');
+    }
+    return;
+  }
   const def = weapons[currentWeapon];
-  const fireDelay = def.rate / runModifiers.fireRate;
-  if (magazines[currentWeapon] <= 0 || reloading || performance.now() - lastShot < fireDelay) return;
-  lastShot = performance.now();
   recoilPitch = Math.min(.18, recoilPitch + def.recoil * (keys.Mouse2 ? .72 : 1));
-  magazines[currentWeapon]--;
   const origin = new THREE.Vector3();
   muzzle.getWorldPosition(origin);
   let baseDirection;
@@ -1435,27 +1473,26 @@ function shoot() {
     const aimPoint = target.position.clone().add(new THREE.Vector3(0, 1.25 * target.scale.y, 0));
     baseDirection = aimPoint.sub(origin).normalize();
   } else {
-    // Fire through the centre-screen camera ray, not a separately guessed player angle.
     const cameraForward = camera.getWorldDirection(new THREE.Vector3());
-    const crosshairPoint = camera.position.clone().addScaledVector(cameraForward, 80);
+    const crosshairPoint = camera.position.clone().addScaledVector(cameraForward, def.range);
     baseDirection = crosshairPoint.sub(origin).normalize();
   }
+  const sequence = shotSequence++;
   for (let i = 0; i < def.pellets; i++) {
-    const direction = baseDirection.clone();
-    direction.x += (Math.random() - .5) * def.spread;
-    direction.y += (Math.random() - .5) * def.spread;
-    direction.z += (Math.random() - .5) * def.spread;
-    projectile(origin, direction, false, def.damage * runModifiers.damage, def.speed, currentWeapon === 'precision' ? 'violet' : currentWeapon === 'shotgun' ? 'orange' : 'cyan');
+    const direction = spreadDirection(baseDirection, def.spread, i, def.pellets, sequence);
+    traceHitscan(origin, direction, def.damage * runModifiers.damage, def.range, def.color, currentWeapon);
   }
   addMuzzleFlash(origin, baseDirection, def.color, currentWeapon);
   updateAmmoHUD();
 }
+
 function reload() {
-  const def = weapons[currentWeapon];
-  if (reloading || magazines[currentWeapon] === magazineSize(currentWeapon)) return;
-  reloading = true;
-  reloadRemaining = def.reload / 1000 / runModifiers.reloadSpeed;
-  updateAmmoHUD();
+  if (weaponMachine.beginReload(runModifiers.reloadSpeed)) {
+    updateAmmoHUD();
+    showToast('RELOADING // ' + weapons[currentWeapon].short);
+  } else if (reserves[currentWeapon] <= 0 && magazines[currentWeapon] < magazineSize(currentWeapon)) {
+    showToast('NO RESERVE AMMUNITION');
+  }
 }
 function damage(amount) {
   if (invuln > 0 || gameOver) return;
@@ -1577,15 +1614,12 @@ function start() {
   $('upgrade-screen').classList.add('hidden');
   kills = 0;
   wave = 1;
-  magazines.rifle = magazineSize('rifle');
-  magazines.shotgun = magazineSize('shotgun');
-  magazines.precision = magazineSize('precision');
-  reloading = false;
-  reloadRemaining = 0;
+  weaponMachine.reset();
+  currentWeapon = weaponMachine.currentWeapon;
   spawnTimer = 0;
   spawnCooldown = 0;
   spawnQueue = 0;
-  lastShot = 0;
+  shotSequence = 0;
   dashCooldown = 0;
   invuln = 0;
   target = null;
@@ -1785,13 +1819,14 @@ function tick(dt) {
   animationClock += dt;
   invuln = Math.max(0, invuln - dt);
   dashCooldown = Math.max(0, dashCooldown - dt);
-  if (reloadRemaining > 0) {
-    reloadRemaining -= dt;
-    if (reloadRemaining <= 0) {
-      magazines[currentWeapon] = magazineSize(currentWeapon);
-      reloading = false;
-      updateAmmoHUD();
-    }
+  const weaponTransition = weaponMachine.update(dt);
+  if (weaponTransition?.type === 'ready' || weaponTransition?.type === 'reloaded') {
+    updateAmmoHUD();
+    if (weaponTransition.type === 'reloaded') showToast('RELOAD COMPLETE // ' + weapons[currentWeapon].short);
+  } else if (weaponTransition?.type === 'swapped') {
+    currentWeapon = weaponTransition.current;
+    buildWeaponVisual();
+    showToast('LOADOUT // ' + weapons[currentWeapon].name);
   }
   if (spawnQueue > 0) {
     spawnCooldown -= dt;
@@ -1838,7 +1873,9 @@ function tick(dt) {
   camera.updateProjectionMatrix();
   const bob = motion.moving ? Math.sin(motion.bobPhase) * (motion.sprinting ? .021 : .009) : 0;
   const sway = motion.moving ? Math.sin(motion.bobPhase * .5) * .008 : 0;
-  viewModel.position.set(sway, -.025 - motion.crouchBlend * .075 + bob, aiming ? -.045 : 0);
+  const reloadDip = weaponMachine.mode === 'reloading' ? .09 + Math.sin(weaponMachine.timer * 13) * .012 : 0;
+  const swapDip = weaponMachine.mode === 'swapping' ? Math.sin((.22 - weaponMachine.timer) / .22 * Math.PI) * .16 : 0;
+  viewModel.position.set(sway, -.025 - motion.crouchBlend * .075 + bob - reloadDip - swapDip, aiming ? -.045 : 0);
   viewModel.rotation.set(aiming ? .018 : 0, 0, Math.sin(motion.bobPhase * .5) * (motion.moving ? .012 : .003));
   $('game-shell').classList.toggle('is-aiming', aiming);
   $('stamina-bar').style.width = motion.stamina + '%';
@@ -1969,7 +2006,7 @@ function tick(dt) {
         effect.velocities[point + 1] -= 4.2 * dt;
       }
       positions.needsUpdate = true;
-    } else {
+    } else if (effect.kind !== 'tracer') {
       effect.mesh.scale.multiplyScalar(1 + dt * (effect.kind === 'muzzle' ? 9 : 7));
     }
     effect.mesh.material.opacity = Math.max(0, effect.life / effect.max);
