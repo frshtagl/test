@@ -118,7 +118,7 @@ assert.ok(js.includes('applySurfaceMaps(metal, industrialSurfaceMaps'), 'Weapon 
 assert.match(readme, /Visual Build 1\.3/);
 assert.match(readme, /## Procedural surface detail/);
 assert.ok(roadmap.includes('## 1.3 — Procedural textures and surface detail'));
-assert.ok(roadmap.includes('## 1.5 — Performance and visual QA'));
+assert.ok(roadmap.includes('## 1.6 — Performance and visual QA'));
 assert.ok(ids.includes('graphics-debug'), 'Graphics diagnostics panel is missing');
 for (const id of ['debug-fps', 'debug-frame', 'debug-p95', 'debug-draw-calls', 'debug-triangles', 'debug-geometries', 'debug-textures', 'debug-scale', 'debug-buffer']) {
   assert.ok(ids.includes(id), 'Graphics diagnostic field is missing: ' + id);
