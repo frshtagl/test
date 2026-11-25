@@ -134,10 +134,15 @@ const weapons = {
 const magazines = { rifle: 30, shotgun: 8, precision: 6 };
 let currentWeapon = 'rifle';
 function buildWeaponVisual() {
+  disposeObject3D(gunGroup);
   gunGroup.clear();
   const def = weapons[currentWeapon];
   const metal = mat(currentWeapon === 'shotgun' ? 0x9b795b : currentWeapon === 'precision' ? 0x8d83b4 : 0x9baebe, .3, .8);
-  const glow = currentWeapon === 'shotgun' ? orangeMat : currentWeapon === 'precision' ? violetMat : cyanMat;
+  const glow = mat(
+    currentWeapon === 'shotgun' ? 0xff7a43 : currentWeapon === 'precision' ? 0xb58aff : 0x24d8ed,
+    .35, .4,
+    currentWeapon === 'shotgun' ? 0x8a260c : currentWeapon === 'precision' ? 0x5426a8 : 0x087b90
+  );
   box(gunGroup, .35, 1.25, -.55, currentWeapon === 'precision' ? .24 : .18, .18, currentWeapon === 'shotgun' ? 1 : currentWeapon === 'precision' ? 1.25 : .8, metal);
   box(gunGroup, .35, 1.25, currentWeapon === 'precision' ? -.7 : -.53, .1, .08, .35, glow);
   if (currentWeapon === 'shotgun') box(gunGroup, .35, 1.1, -.48, .2, .18, .35, metal);
@@ -215,9 +220,9 @@ function makeEnemy() {
   else if (roll > (wave >= 3 ? .53 : .68)) type = 'gunner';
 
   const configs = {
-    scout: { hp: 48 + wave * 2, speed: 3.15 + wave * .07, damage: 7, range: 1.7, cooldown: .8, scale: .78, color: 0xb95b39, eye: 0xffa15a, radius: .85, points: 1 },
-    gunner: { hp: 68 + wave * 3, speed: 1.35 + wave * .035, damage: 8, range: 13, cooldown: 1.75, scale: 1, color: 0x55477e, eye: 0xb99aff, radius: 1, points: 2 },
-    heavy: { hp: 190 + wave * 9, speed: .82 + wave * .025, damage: 16, range: 2.1, cooldown: 1.35, scale: 1.32, color: 0x536475, eye: 0xff805e, radius: 1.35, points: 4 }
+    scout: { hp: 48 + wave * 2, speed: 3.15 + wave * .07, damage: 7, range: 1.7, cooldown: .8, scale: .78, color: 0xb95b39, eye: 0xffa15a, radius: .85 },
+    gunner: { hp: 68 + wave * 3, speed: 1.35 + wave * .035, damage: 8, range: 13, cooldown: 1.75, scale: 1, color: 0x55477e, eye: 0xb99aff, radius: 1 },
+    heavy: { hp: 190 + wave * 9, speed: .82 + wave * .025, damage: 16, range: 2.1, cooldown: 1.35, scale: 1.32, color: 0x536475, eye: 0xff805e, radius: 1.35 }
   };
   const cfg = configs[type];
   const enemy = new THREE.Group();
@@ -347,14 +352,16 @@ function nearestTarget() {
   let best = null;
   let bestScore = Infinity;
   const cameraForward = camera.getWorldDirection(new THREE.Vector3());
+  const muzzlePosition = new THREE.Vector3();
+  muzzle.getWorldPosition(muzzlePosition);
   for (const enemy of enemies) {
     const aimPoint = enemy.position.clone().add(new THREE.Vector3(0, 1.25 * enemy.scale.y, 0));
     const playerDistance = aimPoint.distanceTo(player.position);
     if (playerDistance > aimRange) continue;
     const cameraToTarget = aimPoint.clone().sub(camera.position);
     const alignment = cameraForward.dot(cameraToTarget.normalize());
-    // Only acquire targets reasonably close to the centre of the screen.
-    if (alignment < .93) continue;
+    // Only acquire targets near the centre of the screen and with a clear shot.
+    if (alignment < .93 || segmentObstacleHit(muzzlePosition, aimPoint)) continue;
     const score = playerDistance + (1 - alignment) * 18 + (enemy.userData.type === 'heavy' ? 1.2 : 0);
     if (score < bestScore) {
       bestScore = score;
@@ -441,7 +448,7 @@ function eliminateEnemy(enemy) {
   scene.remove(enemy);
   enemies.splice(index, 1);
   disposeObject3D(enemy);
-  kills += enemy.userData.points;
+  kills += 1;
   bestKills = Math.max(bestKills, kills);
   try { localStorage.setItem('arena-zero-best', String(bestKills)); } catch (_) {}
   updateHUD();
