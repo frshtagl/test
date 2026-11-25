@@ -69,6 +69,14 @@
 - [ ] Combat VFX and animation polish
 - [ ] Before/after visual and performance validation
 
+## 0.9 — Character silhouette and armor detail
+- [x] Layered player chest and shoulder armor
+- [x] Backpack side pods and energy accents
+- [x] Articulated forearm, thigh, knee and shin details
+- [x] Class-aware enemy chest and shoulder plating
+- [x] Enemy upper/lower limb armor attached to existing animation pivots
+- [ ] Further silhouette and animation review in-browser
+
 ## 0.5 — Online features
 - [ ] Evaluate authoritative server architecture
 - [ ] Co-op PvE prototype

@@ -349,6 +349,24 @@ box(playerRig, 0, 1.42, -.34, .7, .48, .17, playerArmor);
 box(playerRig, 0, 1.13, -.32, .52, .16, .16, playerDark);
 box(playerRig, -.39, 1.38, -.12, .16, .38, .34, playerDark);
 box(playerRig, .39, 1.38, -.12, .16, .38, .34, playerDark);
+
+// Layered chest, shoulder and backpack armor adds depth without changing the player rig.
+for (const side of [-1, 1]) {
+  const chestFlank = new THREE.Mesh(new THREE.BoxGeometry(.16, .28, .12), playerJoint);
+  chestFlank.position.set(side * .29, 1.42, -.43);
+  chestFlank.castShadow = true;
+  playerRig.add(chestFlank);
+
+  const shoulderGuard = new THREE.Mesh(new THREE.SphereGeometry(.25, 12, 10), playerArmor);
+  shoulderGuard.scale.set(1.25, .62, 1.15);
+  shoulderGuard.position.set(side * .52, 1.59, -.02);
+  shoulderGuard.castShadow = true;
+  playerRig.add(shoulderGuard);
+  box(playerRig, side * .52, 1.64, -.22, .22, .045, .055, playerCore);
+
+  box(playerRig, side * .34, 1.42, .48, .16, .42, .28, playerDark);
+  box(playerRig, side * .34, 1.43, .635, .09, .24, .025, playerCore);
+}
 const chestCore = new THREE.Mesh(new THREE.SphereGeometry(.105, 12, 10), playerCore);
 chestCore.position.set(0, 1.43, -.445);
 playerRig.add(chestCore);
@@ -400,6 +418,7 @@ function buildPlayerArm(side) {
   forearm.castShadow = true;
   pivot.add(forearm);
   box(pivot, side * .035, -.68, -.16, .25, .18, .22, playerArmor);
+  box(pivot, side * .035, -.63, -.285, .14, .04, .025, playerCore);
   const hand = new THREE.Mesh(new THREE.SphereGeometry(.105, 10, 8), playerJoint);
   hand.position.set(side * .035, -.89, -.12);
   pivot.add(hand);
@@ -419,6 +438,8 @@ function buildPlayerLeg(side) {
   const knee = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), playerJoint);
   knee.position.set(0, -.45, -.025);
   hip.add(knee);
+  box(hip, 0, -.23, -.15, .28, .28, .11, playerArmor);
+  box(hip, 0, -.45, -.17, .26, .14, .09, playerJoint);
   const shinPivot = new THREE.Group();
   shinPivot.position.set(0, -.45, 0);
   hip.add(shinPivot);
@@ -428,6 +449,7 @@ function buildPlayerLeg(side) {
   shinPivot.add(shin);
   box(shinPivot, 0, -.37, -.07, .28, .2, .4, playerArmor);
   box(shinPivot, 0, -.18, -.145, .2, .08, .035, playerCore);
+  box(shinPivot, 0, -.36, -.285, .18, .045, .025, playerCore);
   return { hip, knee: shinPivot };
 }
 const leftLeg = buildPlayerLeg(-1);
@@ -659,6 +681,14 @@ function makeEnemy() {
   rig.add(torso);
   box(rig, 0, 1.38, -.34, type === 'heavy' ? 1.02 : .7, type === 'heavy' ? .62 : .46, .16, dark);
   box(rig, 0, 1.18, -.435, type === 'heavy' ? .58 : .38, .16, .075, accent);
+  const enemyChestPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(type === 'heavy' ? .94 : type === 'gunner' ? .7 : .56, .22, .085),
+    shell
+  );
+  enemyChestPlate.position.set(0, 1.57, -.43);
+  enemyChestPlate.castShadow = true;
+  rig.add(enemyChestPlate);
+  box(rig, 0, 1.57, -.48, type === 'heavy' ? .48 : .34, .045, .035, accent);
   box(rig, 0, 1.34, .43, type === 'heavy' ? .9 : .58, .62, .28, dark);
   box(rig, 0, 1.58, .59, .3, .18, .08, core);
 
@@ -703,6 +733,22 @@ function makeEnemy() {
     lower.position.set(0, -lowerLength * .43, -.025);
     lower.castShadow = true;
     lowerPivot.add(lower);
+
+    const upperArmor = new THREE.Mesh(
+      new THREE.BoxGeometry(width * 2.15, upperLength * .5, .1),
+      shell
+    );
+    upperArmor.position.set(0, -upperLength * .43, -width * .75);
+    upperArmor.castShadow = true;
+    pivot.add(upperArmor);
+
+    const lowerArmor = new THREE.Mesh(
+      new THREE.BoxGeometry(width * 2.05, lowerLength * .42, .09),
+      shell
+    );
+    lowerArmor.position.set(0, -lowerLength * .45, -width * .78);
+    lowerPivot.add(lowerArmor);
+
     if (isArm) {
       const gauntlet = new THREE.Mesh(new THREE.BoxGeometry(width * 2.15, .2, .25), shell);
       gauntlet.position.set(0, -lowerLength * .7, -.075);
@@ -736,6 +782,14 @@ function makeEnemy() {
       shoulder.position.set(side * .52, 1.63, 0);
       shoulder.scale.set(1.15, .85, 1);
       rig.add(shoulder);
+      const shoulderPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(type === 'gunner' ? .4 : .29, .14, .34),
+        shell
+      );
+      shoulderPlate.position.set(side * .52, 1.76, -.035);
+      shoulderPlate.castShadow = true;
+      rig.add(shoulderPlate);
+      box(rig, side * .52, 1.78, -.22, type === 'gunner' ? .24 : .17, .035, .035, accent);
     }
   }
 
