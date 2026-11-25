@@ -49,6 +49,20 @@ This is a source and repository audit, not a live GPU benchmark. No browser-rend
 - Kept antialiasing enabled and made the WebGL context options explicit.
 - Preserved gameplay systems, geometry, materials, combat and input behavior.
 
+## Visual Build 1.3 — Procedural texture and surface detail
+
+- Added deterministic CanvasTexture generation for concrete, brushed metal and armor finishes.
+- Generated matching tangent-space normal maps from a seeded height field.
+- Generated roughness maps with controlled per-pixel variation.
+- Configured repeat wrapping, mipmaps, linear filtering and hardware-supported anisotropy (capped at 8).
+- Applied shared maps to the arena floor, industrial walls and architecture, player armor, enemy armor and weapon metal.
+- Reused scene-lifetime texture sets across materials to avoid generating a new texture set for every enemy or weapon switch.
+- No external image downloads or third-party texture assets were introduced.
+
+## Runtime validation limitations
+
+The source and smoke-test checks can confirm that the texture pipeline is wired into the intended materials, but they cannot establish whether the surface scale, normal strength, seams, GPU memory or startup cost look acceptable on a real device. Browser screenshots and runtime profiling remain required.
+
 ## Next milestone
 
-Build a procedural texture and surface-detail pipeline: reusable CanvasTexture or generated texture maps, correct color-space handling, mipmaps and anisotropy, followed by controlled material wear and normal/roughness variation. Measure GPU cost before increasing texture resolution.
+Inspect the actual rendered textures for tiling, seam visibility, excessive bumpiness and color balance. Then refine animation/camera presentation and profile texture memory and frame times before considering larger maps or more expensive post-processing.

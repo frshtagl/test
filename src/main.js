@@ -168,7 +168,167 @@ const mat = (color, roughness = .7, metalness = .1, emissive = 0, emissiveIntens
     emissive,
     emissiveIntensity: emissive ? emissiveIntensity : 0
   });
+
+// Deterministic, seamless procedural surface maps. These are generated locally;
+// no external image downloads or runtime asset requests are required.
+const textureAnisotropy = Math.max(1, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
+function createSeededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) | 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function configureSurfaceTexture(texture, repeatX, repeatY, colorSpace) {
+  texture.colorSpace = colorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(repeatX, repeatY);
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
+  texture.anisotropy = textureAnisotropy;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createProceduralSurfaceMaps({
+  size = 256,
+  seed = 1,
+  style = 'brushed',
+  baseColor = [236, 239, 243],
+  roughness = .82,
+  roughnessVariation = .1,
+  noiseAmplitude = 10,
+  repeatX = 1,
+  repeatY = 1
+} = {}) {
+  const random = createSeededRandom(seed);
+  const phase = (seed % 997) / 997 * Math.PI * 2;
+  const colorCanvas = document.createElement('canvas');
+  const normalCanvas = document.createElement('canvas');
+  const roughnessCanvas = document.createElement('canvas');
+  for (const canvas of [colorCanvas, normalCanvas, roughnessCanvas]) {
+    canvas.width = size;
+    canvas.height = size;
+  }
+
+  const colorContext = colorCanvas.getContext('2d');
+  const normalContext = normalCanvas.getContext('2d');
+  const roughnessContext = roughnessCanvas.getContext('2d');
+  if (!colorContext || !normalContext || !roughnessContext) {
+    throw new Error('Canvas 2D is unavailable; procedural surface maps cannot be generated.');
+  }
+
+  const colorPixels = colorContext.createImageData(size, size);
+  const normalPixels = normalContext.createImageData(size, size);
+  const roughnessPixels = roughnessContext.createImageData(size, size);
+  const heightField = new Float32Array(size * size);
+
+  for (let y = 0; y < size; y++) {
+    const v = y / size;
+    for (let x = 0; x < size; x++) {
+      const u = x / size;
+      let structure = 0;
+      if (style === 'concrete') {
+        structure =
+          Math.sin(u * Math.PI * 2 * 7 + phase) * .018 +
+          Math.cos(v * Math.PI * 2 * 9 + phase * .7) * .016 +
+          Math.sin((u + v) * Math.PI * 2 * 13 + phase) * .009;
+      } else if (style === 'brushed') {
+        structure =
+          Math.sin(v * Math.PI * 2 * 76 + phase) * .018 +
+          Math.sin(v * Math.PI * 2 * 19 + phase * .4) * .012;
+      } else {
+        structure =
+          Math.sin(u * Math.PI * 2 * 31 + phase) * .01 +
+          Math.cos(v * Math.PI * 2 * 27 + phase * .6) * .01 +
+          Math.sin((u - v) * Math.PI * 2 * 15 + phase) * .006;
+      }
+
+      const index = y * size + x;
+      const grain = (random() - .5) * .035;
+      heightField[index] = structure + grain;
+      const luminance = (random() - .5) * noiseAmplitude + structure * 180;
+      const roughnessValue = THREE.MathUtils.clamp(
+        roughness + (random() - .5) * roughnessVariation + Math.abs(structure) * .45,
+        .08,
+        1
+      );
+      const offset = index * 4;
+      colorPixels.data[offset] = THREE.MathUtils.clamp(baseColor[0] + luminance, 0, 255);
+      colorPixels.data[offset + 1] = THREE.MathUtils.clamp(baseColor[1] + luminance, 0, 255);
+      colorPixels.data[offset + 2] = THREE.MathUtils.clamp(baseColor[2] + luminance, 0, 255);
+      colorPixels.data[offset + 3] = 255;
+      const roughByte = Math.round(roughnessValue * 255);
+      roughnessPixels.data[offset] = roughByte;
+      roughnessPixels.data[offset + 1] = roughByte;
+      roughnessPixels.data[offset + 2] = roughByte;
+      roughnessPixels.data[offset + 3] = 255;
+    }
+  }
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const left = y * size + (x + size - 1) % size;
+      const right = y * size + (x + 1) % size;
+      const up = ((y + size - 1) % size) * size + x;
+      const down = ((y + 1) % size) * size + x;
+      const dx = (heightField[right] - heightField[left]) * 12;
+      const dy = (heightField[down] - heightField[up]) * 12;
+      let nx = -dx;
+      let ny = -dy;
+      let nz = 1;
+      const length = Math.sqrt(nx * nx + ny * ny + nz * nz);
+      nx /= length;
+      ny /= length;
+      nz /= length;
+      const offset = (y * size + x) * 4;
+      normalPixels.data[offset] = Math.round((nx * .5 + .5) * 255);
+      normalPixels.data[offset + 1] = Math.round((ny * .5 + .5) * 255);
+      normalPixels.data[offset + 2] = Math.round((nz * .5 + .5) * 255);
+      normalPixels.data[offset + 3] = 255;
+    }
+  }
+
+  colorContext.putImageData(colorPixels, 0, 0);
+  normalContext.putImageData(normalPixels, 0, 0);
+  roughnessContext.putImageData(roughnessPixels, 0, 0);
+
+  return {
+    map: configureSurfaceTexture(new THREE.CanvasTexture(colorCanvas), repeatX, repeatY, THREE.SRGBColorSpace),
+    normalMap: configureSurfaceTexture(new THREE.CanvasTexture(normalCanvas), repeatX, repeatY, THREE.NoColorSpace),
+    roughnessMap: configureSurfaceTexture(new THREE.CanvasTexture(roughnessCanvas), repeatX, repeatY, THREE.NoColorSpace)
+  };
+}
+
+function applySurfaceMaps(material, surfaceMaps, normalStrength = .16) {
+  material.map = surfaceMaps.map;
+  material.normalMap = surfaceMaps.normalMap;
+  material.roughnessMap = surfaceMaps.roughnessMap;
+  material.normalScale.set(normalStrength, normalStrength);
+  material.needsUpdate = true;
+}
+
+const floorSurfaceMaps = createProceduralSurfaceMaps({
+  size: 512, seed: 241, style: 'concrete', baseColor: [232, 236, 240],
+  roughness: .9, roughnessVariation: .08, noiseAmplitude: 13, repeatX: 14, repeatY: 14
+});
+const industrialSurfaceMaps = createProceduralSurfaceMaps({
+  size: 256, seed: 517, style: 'brushed', baseColor: [238, 241, 245],
+  roughness: .76, roughnessVariation: .12, noiseAmplitude: 9, repeatX: 2.5, repeatY: 1.5
+});
+const armorSurfaceMaps = createProceduralSurfaceMaps({
+  size: 256, seed: 823, style: 'armor', baseColor: [240, 242, 246],
+  roughness: .72, roughnessVariation: .1, noiseAmplitude: 7, repeatX: 1.5, repeatY: 1.5
+});
+
 const floorMat = mat(0x0c1723, .86, .34, 0x030811, .2);
+applySurfaceMaps(floorMat, floorSurfaceMaps, .24);
 const wallMat = mat(0x1a2a3b, .56, .7, 0x030912, .3);
 const cyanMat = mat(0x24d8ed, .28, .32, 0x087b90, 1.1);
 const orangeMat = mat(0xff7a43, .34, .28, 0x8a260c, .85);
@@ -182,6 +342,13 @@ const architectureVentMat = mat(0x091521, .9, .28);
 const architectureVentSlatMat = mat(0x6b8190, .38, .74);
 const architectureFixtureMat = mat(0x142a3c, .48, .68);
 const architectureWarningMat = mat(0xff9a55, .36, .28, 0x5a2109, .8);
+applySurfaceMaps(wallMat, industrialSurfaceMaps, .15);
+applySurfaceMaps(architecturePanelMat, industrialSurfaceMaps, .14);
+applySurfaceMaps(architectureRibMat, industrialSurfaceMaps, .1);
+applySurfaceMaps(architectureRailMat, industrialSurfaceMaps, .1);
+applySurfaceMaps(architectureVentMat, industrialSurfaceMaps, .08);
+applySurfaceMaps(architectureVentSlatMat, industrialSurfaceMaps, .1);
+applySurfaceMaps(architectureFixtureMat, industrialSurfaceMaps, .08);
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), floorMat);
 floor.rotation.x = -Math.PI / 2;
@@ -418,6 +585,9 @@ player.add(playerRig);
 const playerArmor = mat(0x294a63, .42, .68);
 const playerDark = mat(0x101d2b, .56, .66);
 const playerJoint = mat(0x657f91, .34, .76);
+applySurfaceMaps(playerArmor, armorSurfaceMaps, .18);
+applySurfaceMaps(playerDark, armorSurfaceMaps, .12);
+applySurfaceMaps(playerJoint, industrialSurfaceMaps, .1);
 const playerCore = mat(0x42e8f2, .26, .3, 0x16a9bd, 1.8);
 const playerVisorMat = new THREE.MeshPhysicalMaterial({
   color: 0x164b62,
@@ -562,6 +732,8 @@ function buildWeaponVisual() {
   const def = weapons[currentWeapon];
   const metal = mat(currentWeapon === 'shotgun' ? 0x9b795b : currentWeapon === 'precision' ? 0x8d83b4 : 0x9baebe, .3, .84);
   const darkMetal = mat(0x172635, .48, .74);
+  applySurfaceMaps(metal, industrialSurfaceMaps, .12);
+  applySurfaceMaps(darkMetal, industrialSurfaceMaps, .08);
   const glow = mat(
     currentWeapon === 'shotgun' ? 0xff7a43 : currentWeapon === 'precision' ? 0xb58aff : 0x24d8ed,
     .28, .38,
@@ -804,6 +976,9 @@ function makeEnemy() {
   const shell = mat(cfg.color, .42, .68, 0x180d18, .28);
   const dark = mat(type === 'heavy' ? 0x263644 : 0x182536, .56, .7);
   const joint = mat(type === 'scout' ? 0x7d5147 : type === 'gunner' ? 0x77709d : 0x8093a1, .36, .72);
+  applySurfaceMaps(shell, armorSurfaceMaps, .16);
+  applySurfaceMaps(dark, armorSurfaceMaps, .1);
+  applySurfaceMaps(joint, industrialSurfaceMaps, .08);
   const core = mat(cfg.eye, .24, .32, cfg.eye, 1.8);
   const accent = mat(type === 'scout' ? 0xff9a57 : type === 'gunner' ? 0xc3a0ff : 0xff6f54, .32, .4, cfg.eye, 1.2);
   const torsoGeometry = type === 'scout'
