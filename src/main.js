@@ -2,6 +2,7 @@ import { parseBinarySTL } from './assets/binary-stl.mjs';
 import { createFpsControllerState, resetFpsControllerState, stepFpsController } from './gameplay/fps-controller.mjs';
 import {createWeaponSystem,canFireWeapon,consumeWeaponRound,beginWeaponReload,cancelWeaponReload,requestWeaponSwap,stepWeaponSystem,setWeaponCapacity,resetWeaponSystem} from './gameplay/weapon-system.mjs';
 import {generatePelletDirections,resolveHitscan} from './gameplay/combat.mjs';
+import {createNavigationGrid,createTacticalBrain,stepTacticalBrain,updateTacticalPath} from './gameplay/tactical-ai.mjs';
 
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
@@ -512,6 +513,9 @@ for (let i = 0; i < 10; i++) {
   }
 }
 
+// Static navigation grid: conservative clearance keeps all three enemy silhouettes out of cover.
+const enemyNavigationGrid = createNavigationGrid(arenaColliders, { min: -22, max: 22, cellSize: 1.5, clearance: .86 });
+
 // Visual-only detail pass. All placements stay on the perimeter or existing pillars,
 // so the established player/enemy navigation and projectile collision layout is preserved.
 function buildArenaArchitectureDetails() {
@@ -977,6 +981,7 @@ let dashCooldown = 0, invuln = 0, spawnTimer = 0, spawnCooldown = 0;
 let toastTimer = 0, hitTimer = 0, damageFlashTimer = 0, target = null;
 let spawnQueue = 0, animationClock = 0;
 const enemies = [], shots = [], effects = [];
+let enemySequence = 0;
 let intermission = false, upgradesTaken = 0, upgradeChoices = [];
 let maxHealth = 100;
 const runModifiers = { damage: 1, fireRate: 1, reloadSpeed: 1, moveSpeed: 1, magazine: 1 };
@@ -1304,9 +1309,24 @@ function makeEnemy() {
   resolveArenaCollisions(enemy.position, cfg.radius * .55);
   enemy.position.x = THREE.MathUtils.clamp(enemy.position.x, -22, 22);
   enemy.position.z = THREE.MathUtils.clamp(enemy.position.z, -22, 22);
+  const enemySeed = ++enemySequence;
+  const brain = createTacticalBrain(type, { x: player.position.x, z: player.position.z }, enemySeed * 2654435761);
+  const warningRadius = type === 'heavy' ? 3.65 : type === 'scout' ? 2.55 : .82;
+  const telegraphMaterial = new THREE.MeshBasicMaterial({
+    color: type === 'heavy' ? 0xff684e : type === 'scout' ? 0xffb15e : 0xb99aff,
+    transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, toneMapped: false
+  });
+  const attackTelegraph = new THREE.Mesh(
+    new THREE.RingGeometry((warningRadius - .1) / cfg.scale, warningRadius / cfg.scale, 48),
+    telegraphMaterial
+  );
+  attackTelegraph.rotation.x = -Math.PI / 2;
+  attackTelegraph.position.y = .045;
+  attackTelegraph.visible = false;
+  enemy.add(attackTelegraph);
   enemy.userData = {
     type, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, damage: cfg.damage,
-    range: cfg.range, cooldown: Math.random() * .7, attackRate: cfg.cooldown,
+    range: cfg.range, attackRate: cfg.cooldown, brain, attackTelegraph,
     radius: cfg.radius, points: cfg.points, barFill, rig, shell,
     legs: { left: leftLeg, right: rightLeg },
     arms: { left: leftArm, right: rightArm },
@@ -1633,6 +1653,7 @@ function start() {
     disposeObject3D(enemy);
   }
   enemies.length = 0;
+  enemySequence = 0;
   for (const shot of shots) {
     scene.remove(shot.mesh);
     disposeObject3D(shot.mesh, false);
@@ -1886,16 +1907,68 @@ function tick(dt) {
 
   for (const enemy of enemies) {
     const data = enemy.userData;
+    const brain = data.brain;
     const toPlayer = new THREE.Vector3().subVectors(player.position, enemy.position);
     const distance = toPlayer.length();
-    const direction = toPlayer.clone().normalize();
-    // Enemy meshes face local -Z, so invert the direction when calculating yaw.
-    enemy.rotation.y = Math.atan2(-direction.x, -direction.z);
+    const direction = distance > .001 ? toPlayer.clone().normalize() : new THREE.Vector3(0, 0, -1);
+    const sightOrigin = enemy.position.clone().add(new THREE.Vector3(0, 1.25 * enemy.scale.y, 0));
+    const sightTarget = player.position.clone().add(new THREE.Vector3(0, 1.05, 0));
+    const hasLineOfSight = !segmentObstacleHit(sightOrigin, sightTarget);
+
+    // Enemies only update their last-known position when the player is actually visible.
+    if (hasLineOfSight) {
+      brain.lastKnown.x = player.position.x;
+      brain.lastKnown.z = player.position.z;
+      brain.lostSightTime = 0;
+    } else {
+      brain.lostSightTime += dt;
+    }
+
+    const attackDistance = data.type === 'heavy' ? 3.65 : data.type === 'scout' ? data.range + .7 : data.range + 2.5;
+    const canAttack = hasLineOfSight && distance <= attackDistance &&
+      (data.type !== 'gunner' || distance >= 7.0);
+    const attackStep = stepTacticalBrain(brain, {
+      dt, type: data.type, canAttack, hasLineOfSight, attackRate: data.attackRate
+    });
+    const busy = brain.state === 'windup' || brain.state === 'recover';
+
+    // A visible, short-lived ground warning makes melee and heavy slam attacks dodgeable.
+    const telegraph = data.attackTelegraph;
+    if (attackStep.telegraph) {
+      telegraph.visible = true;
+      telegraph.material.opacity = .38 + (Math.sin(animationClock * 24) + 1) * .11;
+    } else {
+      telegraph.material.opacity = Math.max(0, telegraph.material.opacity - dt * 2.8);
+      if (telegraph.material.opacity < .015) telegraph.visible = false;
+    }
+
+    let waypoint = null;
+    if (!busy) {
+      waypoint = updateTacticalPath(
+        brain, enemy.position, brain.lastKnown, enemyNavigationGrid, arenaColliders, dt, data.type
+      );
+    }
+    const moveDirection = new THREE.Vector3();
+    if (waypoint && !busy) {
+      moveDirection.set(waypoint.x - enemy.position.x, 0, waypoint.z - enemy.position.z);
+      const remaining = moveDirection.length();
+      if (remaining > .2) {
+        moveDirection.multiplyScalar(1 / remaining);
+        const speed = data.speed * (data.type === 'gunner' && hasLineOfSight && distance < 9 ? 1.12 : 1);
+        enemy.position.addScaledVector(moveDirection, Math.min(speed * dt, remaining));
+      } else {
+        moveDirection.set(0, 0, 0);
+      }
+    }
+
+    // Face the player only while visible; otherwise search toward the last known position.
+    const knownDirection = new THREE.Vector3(brain.lastKnown.x - enemy.position.x, 0, brain.lastKnown.z - enemy.position.z);
+    const facing = hasLineOfSight ? direction : moveDirection.lengthSq() > .001 ? moveDirection : knownDirection;
+    if (facing.lengthSq() > .001) enemy.rotation.y = Math.atan2(-facing.x, -facing.z);
+
     data.animTime += dt;
-    const enemyMoving = data.type === 'gunner'
-      ? Math.abs(distance - data.range) > 2
-      : distance > data.range;
-    const gait = enemyMoving ? Math.min(1, data.speed / 2.7) : .035;
+    const enemyMoving = moveDirection.lengthSq() > .001 && !busy;
+    const gait = enemyMoving ? Math.min(1, data.speed / 2.7) : .025;
     const cycle = data.animTime * (data.type === 'scout' ? 12 : data.type === 'heavy' ? 5.5 : 7.5) + data.animOffset;
     const stride = Math.sin(cycle) * gait * (data.type === 'scout' ? .72 : data.type === 'heavy' ? .34 : .46);
     data.legs.left.upper.rotation.x = stride;
@@ -1913,26 +1986,48 @@ function tick(dt) {
       data.hitFlash = Math.max(0, data.hitFlash - dt);
       data.shell.emissiveIntensity = 1.5 + (data.hitFlash / .16) * 2.4;
     } else data.shell.emissiveIntensity = 1.5;
-    data.cooldown -= dt;
-    if (data.type === 'gunner') {
-      if (distance > data.range + 2) enemy.position.addScaledVector(direction, data.speed * dt);
-      else if (distance < data.range - 2) enemy.position.addScaledVector(direction, -data.speed * .65 * dt);
-      if (distance <= data.range + 3 && data.cooldown <= 0) {
-        const from = enemy.position.clone().add(new THREE.Vector3(0, 1.25, 0));
+
+    if (attackStep.attack) {
+      if (data.type === 'gunner') {
+        const from = enemy.position.clone().add(new THREE.Vector3(0, 1.25 * enemy.scale.y, 0));
         const to = player.position.clone().add(new THREE.Vector3(0, 1, 0));
         projectile(from, to.sub(from), true, data.damage, 17, 'orange');
-        data.recoil = .24;
-        data.cooldown = data.attackRate;
+        data.recoil = .42;
+        addBurst(from, 0xb99aff, .13);
+      } else if (data.type === 'scout') {
+        if (hasLineOfSight && distance <= data.range + .85) {
+          damage(data.damage);
+          addBurst(player.position.clone().add(new THREE.Vector3(0, .8, 0)), 0xffa15a, .22);
+        }
+        data.recoil = .48;
+      } else {
+        // Heavy slam: the player can escape the clearly marked radius before impact.
+        if (hasLineOfSight && distance <= 3.75) {
+          damage(data.damage);
+          addBurst(player.position.clone().add(new THREE.Vector3(0, .12, 0)), 0xff684e, .48);
+        } else {
+          addBurst(enemy.position.clone().add(new THREE.Vector3(0, .16, 0)), 0xff684e, .28);
+        }
+        data.recoil = .58;
       }
-    } else if (distance > data.range) {
-      enemy.position.addScaledVector(direction, data.speed * dt);
-    } else if (data.cooldown <= 0) {
-      damage(data.damage);
-      data.cooldown = data.attackRate;
     }
+
+    const beforeCollision = enemy.position.clone();
     resolveArenaCollisions(enemy.position, data.radius * .55);
     enemy.position.x = THREE.MathUtils.clamp(enemy.position.x, -22, 22);
     enemy.position.z = THREE.MathUtils.clamp(enemy.position.z, -22, 22);
+    const actualMovement = enemy.position.distanceTo(beforeCollision);
+    if (waypoint && !busy && actualMovement < Math.min(.025, data.speed * dt * .12)) {
+      brain.stuckTime += dt;
+      if (brain.stuckTime > .62) {
+        brain.repathTimer = 0;
+        brain.pathIndex = brain.path.length;
+        brain.strafeSign *= -1;
+        brain.stuckTime = 0;
+      }
+    } else {
+      brain.stuckTime = 0;
+    }
   }
 
   for (let i = shots.length - 1; i >= 0; i--) {
