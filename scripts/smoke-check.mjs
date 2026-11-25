@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
   readFile('README.md', 'utf8'),
-  readFile('.github/workflows/deploy.yml', 'utf8')
+  readFile('.github/workflows/deploy.yml', 'utf8'),
+  readFile('docs/GRAPHICS_MASTER_PROMPT.md', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -35,6 +36,14 @@ assert.ok(js.includes("lockRequest.catch("), 'Pointer-lock rejection must not bl
 assert.doesNotMatch(js, /\$\(['"]start-button['"]\)\.addEventListener\('click'/, 'Start click must not depend on late module initialization');
 assert.match(js, /camera\.getWorldDirection/);
 assert.ok(js.includes('const playerRig = new THREE.Group()'));
+assert.ok(js.includes('function addInstancedBoxes('), 'Instanced architecture helper is missing');
+assert.ok(js.includes('function buildArenaArchitectureDetails()'), 'Arena architecture detail pass is missing');
+assert.ok(js.includes('buildArenaArchitectureDetails();'), 'Arena architecture detail pass is not initialized');
+assert.ok(js.includes('new THREE.InstancedMesh(architectureUnitBox'), 'Repeated architecture details must use instancing');
+assert.ok(js.includes('batch.computeBoundingSphere();'), 'Instanced architecture bounds must be computed');
+assert.match(readme, /Visual Build 0\.6/);
+assert.match(graphicsPrompt, /## 12\. Ordered upgrade sequence/);
+assert.match(graphicsPrompt, /Inspect\. Plan\. Implement one subsystem/);
 assert.ok(js.includes('function buildPlayerArm('));
 assert.ok(js.includes('function buildPlayerLeg('));
 assert.ok(js.includes('playerParts.leftLeg.hip.rotation.x'));

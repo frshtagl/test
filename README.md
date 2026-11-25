@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A third-person PvE browser arena shooter built with Three.js. Character Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices, stackable combat improvements, expanded magazines, reinforced health and mobility upgrades. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, cinematic arena lighting, three-weapon combat and local persistence.
+A third-person PvE browser arena shooter built with Three.js. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6 begins a dedicated environment-art pass with instanced industrial wall panels, structural ribs, vent modules, light fixtures, pillar armor trims and warning markers. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
 
 ## Run locally
 
@@ -71,6 +71,7 @@ After Pages is enabled, use Run workflow whenever you want to publish a new buil
 - .github/workflows/deploy.yml — manual GitHub Pages deployment
 - scripts/smoke-check.mjs — static integration checks
 - docs/ROADMAP.md — development milestones
+- docs/GRAPHICS_MASTER_PROMPT.md — detailed visual-upgrade protocol
 
 ## License
 
