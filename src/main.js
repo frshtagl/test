@@ -557,7 +557,10 @@ function createCoverHealthIndicator() {
 }
 
 function selectCoverPlacements() {
-  const placements = [], reserved = [];
+  const placements = [], reserved = [
+    { x: 0, z: -14, halfX: .775, halfZ: .775 },
+    { x: 0, z: 14, halfX: .775, halfZ: .775 }
+  ];
   const angles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5, Math.PI / 4, Math.PI * .75, Math.PI * 1.25, Math.PI * 1.75];
   for (const radius of [11.5, 13.5]) {
     for (const angle of angles) {
