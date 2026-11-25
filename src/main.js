@@ -1422,7 +1422,7 @@ function nearestTarget() {
 function shoot() {
   const def=weapons[currentWeapon],shotTime=performance.now();
   if(!canFireWeapon(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate)||!consumeWeaponRound(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate))return;
-  recoilPitch=Math.min(.18,recoilPitch+def.recoil*(keys.Mouse2?.72:1));
+  recoilPitch = Math.min(.18, recoilPitch + def.recoil * (keys.Mouse2 ? .72 : 1));
   const origin = new THREE.Vector3();
   muzzle.getWorldPosition(origin);
   let baseDirection;
