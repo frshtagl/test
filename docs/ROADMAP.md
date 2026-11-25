@@ -57,7 +57,10 @@
 - [x] Recessed cyan wall fixtures and restrained orange warning markers
 - [x] Metallic armor trims on the four existing arena support pillars
 - [x] Reuse static geometry/materials and preserve existing gameplay collision layout
-- [ ] Lighting and shadow refinement
+- [x] Refined fog density, exposure and ambient/key/rim light balance
+- [x] Tighter directional shadow-camera bounds and bias tuning
+- [x] Added restrained perimeter fill illumination without another shadow map
+- [ ] Further PBR material and surface-detail pass
 - [ ] PBR material and surface-detail pass
 - [ ] Character, enemy and weapon visual refinement
 - [ ] Combat VFX and animation polish

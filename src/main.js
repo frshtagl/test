@@ -23,7 +23,7 @@ const $ = id => document.getElementById(id);
 const root = $('game');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070d18);
-scene.fog = new THREE.FogExp2(0x070d18, .018);
+scene.fog = new THREE.FogExp2(0x070d18, .0155);
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, .1, 150);
 camera.position.set(0, 12, 29);
 camera.lookAt(0, 1, 0);
@@ -34,33 +34,43 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.18;
+renderer.toneMappingExposure = 1.12;
 root.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0x9abfff, 0x101a27, 1.35));
-const keyLight = new THREE.DirectionalLight(0xc0e5ff, 2.6);
+const hemisphereLight = new THREE.HemisphereLight(0x9abfff, 0x101a27, 1.15);
+scene.add(hemisphereLight);
+const keyLight = new THREE.DirectionalLight(0xc0e5ff, 2.45);
 keyLight.position.set(-12, 22, 8);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(1536, 1536);
-keyLight.shadow.camera.left = -28;
-keyLight.shadow.camera.right = 28;
-keyLight.shadow.camera.top = 28;
-keyLight.shadow.camera.bottom = -28;
+keyLight.shadow.camera.left = -26;
+keyLight.shadow.camera.right = 26;
+keyLight.shadow.camera.top = 26;
+keyLight.shadow.camera.bottom = -26;
 keyLight.shadow.camera.near = .5;
-keyLight.shadow.camera.far = 70;
-keyLight.shadow.bias = -.00018;
-keyLight.shadow.normalBias = .025;
-keyLight.shadow.radius = 4;
+keyLight.shadow.camera.far = 64;
+keyLight.shadow.camera.updateProjectionMatrix();
+keyLight.shadow.bias = -.00012;
+keyLight.shadow.normalBias = .02;
+keyLight.shadow.radius = 3;
 scene.add(keyLight);
-const rimLight = new THREE.DirectionalLight(0x4c7cff, .8);
+
+// Non-shadow-casting fill lights preserve shape readability without multiplying shadow-map cost.
+const rimLight = new THREE.DirectionalLight(0x4c7cff, .95);
 rimLight.position.set(14, 10, -18);
 scene.add(rimLight);
-const cyanLight = new THREE.PointLight(0x16cde8, 34, 42);
+const frontFillLight = new THREE.DirectionalLight(0x8bb8df, .38);
+frontFillLight.position.set(0, 11, 20);
+scene.add(frontFillLight);
+const cyanLight = new THREE.PointLight(0x16cde8, 29, 40);
 cyanLight.position.set(0, 6, 0);
 scene.add(cyanLight);
-const orangeLight = new THREE.PointLight(0xff653d, 22, 36);
+const orangeLight = new THREE.PointLight(0xff653d, 18, 34);
 orangeLight.position.set(-18, 5, -15);
 scene.add(orangeLight);
+const perimeterAccentLight = new THREE.PointLight(0x269bc8, 7, 23);
+perimeterAccentLight.position.set(18, 3.8, 16);
+scene.add(perimeterAccentLight);
 
 const mat = (color, roughness = .7, metalness = .1, emissive = 0) =>
   new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity: emissive ? 1.5 : 0 });
@@ -1331,8 +1341,9 @@ function animate(now) {
   for (const ring of floorRingPulses) {
     ring.material.opacity = ring.base + Math.sin(now * .00135 + ring.phase) * .035;
   }
-  cyanLight.intensity = 34 + Math.sin(now * .0011) * 2.2;
-  orangeLight.intensity = 22 + Math.sin(now * .0009 + 1.4) * 1.5;
+  cyanLight.intensity = 29 + Math.sin(now * .0011) * 1.6;
+  orangeLight.intensity = 18 + Math.sin(now * .0009 + 1.4) * 1.0;
+  perimeterAccentLight.intensity = 7 + Math.sin(now * .0008 + .7) * .45;
   renderer.render(scene, camera);
 }
 animate(previous);
