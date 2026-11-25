@@ -27,5 +27,7 @@ jobs:
         run: node scripts/combat-test.mjs
       - name: Test tactical AI and navigation
         run: node scripts/tactical-ai-test.mjs
+      - name: Test destructible cover and collision proxies
+        run: node scripts/cover-system-test.mjs
       - name: Validate generated VTK meshes
         run: node scripts/vtk-asset-test.mjs
