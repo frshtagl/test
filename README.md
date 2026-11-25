@@ -61,9 +61,11 @@ Available modules improve weapon damage, fire rate, reload speed, movement speed
 
 ## Enemy classes
 
-- Scout: fast melee attacker
-- Gunner: ranged attacker that maintains distance
-- Heavy: slow, high-health bruiser
+- **Scout:** flanks around the player, closes to melee range and telegraphs its strike.
+- **Gunner:** navigates to clear firing positions, holds medium range and charges projectiles before firing.
+- **Heavy:** advances through cover, faces visible targets, exposes its rear reactor and telegraphs a wide-area slam.
+
+All classes use line-of-sight perception and last-known player position. They do not track the player through solid cover.
 
 ## Persistence
 
