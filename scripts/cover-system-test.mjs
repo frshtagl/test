@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createCoverState,applyCoverDamage,createCoverCollider} from '../src/gameplay/cover-system.mjs';
+import {createCoverState,applyCoverDamage,createCoverCollider,calculateCoverDamage,getCoverWeaponProfile} from '../src/gameplay/cover-system.mjs';
 const cover=createCoverState('barricade-a',180);
 assert.equal(cover.health,180);assert.equal(cover.ratio,1);assert.equal(cover.stage,'intact');
 let hit=applyCoverDamage(cover,30);
@@ -24,8 +24,6 @@ const diagonal=createCoverCollider('diagonal',8,8,Math.PI/4);
 assert.ok(Math.abs(diagonal.halfX-diagonal.halfZ)<1e-9);
 assert.throws(()=>createCoverCollider('',0,0,0),/non-empty/);
 assert.throws(()=>createCoverCollider('bad',NaN,0,0),/finite/);
-
-import {calculateCoverDamage,getCoverWeaponProfile} from '../src/gameplay/cover-system.mjs';
 assert.equal(calculateCoverDamage('rifle',29),21.75);
 assert.equal(calculateCoverDamage('shotgun',13),7.54);
 assert.equal(calculateCoverDamage('precision',105),157.5);
