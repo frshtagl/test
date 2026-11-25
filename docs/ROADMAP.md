@@ -14,6 +14,10 @@
 - [x] Ranged enemy projectiles and differentiated enemy behaviour
 - [x] Enemy health bars, hit markers and player damage feedback
 - [x] Persistent local best score and saved combat-assist settings
+- [x] Camera-aligned centre-screen firing and narrow target acquisition
+- [x] Swept projectile collision to prevent fast shots tunnelling through targets
+- [x] Arena cover collision for player/enemies; cover blocks shots and dash movement
+- [x] Cleanup of transient geometries and materials between waves/runs
 - [ ] Manual playtest and balance pass across desktop/mobile
 
 ## 0.3 — World and progression
