@@ -1,4 +1,23 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+// Try a second CDN if the primary module host is unavailable or blocked.
+async function loadThreeModule() {
+  const sources = [
+    'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
+    'https://unpkg.com/three@0.160.0/build/three.module.js'
+  ];
+  let lastError;
+  for (const source of sources) {
+    try {
+      const module = await import(source);
+      console.info('[ARENA ZERO] 3D engine loaded:', source);
+      return module;
+    } catch (error) {
+      lastError = error;
+      console.warn('[ARENA ZERO] Could not load 3D engine from', source, error);
+    }
+  }
+  throw new Error('The 3D engine could not load from either CDN. Check your internet connection, then reload the game. ' + (lastError?.message || ''));
+}
+const THREE = await loadThreeModule();
 
 const $ = id => document.getElementById(id);
 const root = $('game');
@@ -825,10 +844,16 @@ function start() {
   $('damage-flash').classList.remove('active');
   startWave();
   updateHUD();
-  renderer.domElement.requestPointerLock?.();
+  // Pointer lock is optional: browsers may deny it, but that must never cancel deployment.
+  try {
+    const lockRequest = renderer.domElement.requestPointerLock?.();
+    if (lockRequest && typeof lockRequest.catch === 'function') {
+      lockRequest.catch(() => showToast('MOUSE LOOK UNAVAILABLE // CLICK THE ARENA TO RETRY'));
+    }
+  } catch (_) {
+    showToast('MOUSE LOOK UNAVAILABLE // KEYBOARD CONTROLS ACTIVE');
+  }
 }
-$('start-button').addEventListener('click', start);
-$('restart-button').addEventListener('click', start);
 $('aim-toggle').addEventListener('change', event => { aimAssist = event.target.checked; saveSettings(); });
 $('fire-toggle').addEventListener('change', event => { autoFire = event.target.checked; saveSettings(); });
 $('aim-range').addEventListener('input', event => {
@@ -886,6 +911,13 @@ addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+document.addEventListener('pointerlockerror', () => {
+  if (started && !gameOver) showToast('MOUSE LOOK UNAVAILABLE // CLICK THE ARENA TO RETRY');
+});
+
+// The HTML bootstrap installs the click handler before this module finishes loading.
+// Register only after all game listeners are ready, then replay any early click.
+window.__ARENA_ZERO_REGISTER_START__?.(start);
 
 function tick(dt) {
   if (!started || gameOver) return;
