@@ -278,6 +278,8 @@ assert.ok(squadModule.includes('export function relaySquadContact'), 'Squad cont
 assert.ok(squadTest.includes('shared contact memory'), 'Squad contact regression tests are missing');
 assert.ok(js.includes("from './gameplay/threat-awareness.mjs'"), 'Threat awareness module import is missing');
 assert.ok(js.includes('function updateThreatIndicator(dt)'), 'Directional threat HUD updater is missing');
+assert.ok(js.includes('function clearThreatIndicator()'), 'Threat warnings must clear when combat pauses');
+assert.ok(js.includes('clearThreatIndicator();'), 'Threat warning reset integration is missing');
 assert.ok(js.includes("$('threat-arrow').style.transform"), 'Threat arrow must rotate toward incoming attacks');
 assert.ok(ids.includes('threat-indicator') && ids.includes('threat-arrow') && ids.includes('threat-label'), 'Threat HUD elements are missing');
 assert.ok(css.includes('.threat-indicator.critical'), 'Threat urgency styling is missing');
