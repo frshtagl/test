@@ -125,6 +125,44 @@ if (typeof ResizeObserver !== 'undefined') {
   gameResizeObserver.observe(root);
 }
 
+// Optional, read-only render telemetry. Hidden in normal play; enable with ?debug=1 or F3.
+let graphicsDiagnosticsEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
+const graphicsDebugPanel = $('graphics-debug');
+const graphicsFrameSamples = [];
+const graphicsBufferSize = new THREE.Vector2();
+let lastGraphicsDiagnosticsUpdate = 0;
+
+function setGraphicsDiagnosticsVisible(visible) {
+  graphicsDiagnosticsEnabled = Boolean(visible);
+  graphicsDebugPanel.classList.toggle('hidden', !graphicsDiagnosticsEnabled);
+  if (!graphicsDiagnosticsEnabled) graphicsFrameSamples.length = 0;
+}
+
+function updateGraphicsDiagnostics(frameMs, now) {
+  if (!graphicsDiagnosticsEnabled) return;
+  graphicsFrameSamples.push(Math.max(.1, frameMs));
+  if (graphicsFrameSamples.length > 120) graphicsFrameSamples.shift();
+  if (now - lastGraphicsDiagnosticsUpdate < 250) return;
+  lastGraphicsDiagnosticsUpdate = now;
+
+  const orderedSamples = graphicsFrameSamples.slice().sort((a, b) => a - b);
+  const averageFrameMs = orderedSamples.reduce((sum, value) => sum + value, 0) / Math.max(1, orderedSamples.length);
+  const p95FrameMs = orderedSamples[Math.min(orderedSamples.length - 1, Math.floor((orderedSamples.length - 1) * .95))] || 0;
+  renderer.getDrawingBufferSize(graphicsBufferSize);
+
+  $('debug-fps').textContent = String(Math.round(1000 / Math.max(.1, averageFrameMs)));
+  $('debug-frame').textContent = averageFrameMs.toFixed(1) + ' ms';
+  $('debug-p95').textContent = p95FrameMs.toFixed(1) + ' ms';
+  $('debug-draw-calls').textContent = String(renderer.info.render.calls);
+  $('debug-triangles').textContent = renderer.info.render.triangles.toLocaleString();
+  $('debug-geometries').textContent = String(renderer.info.memory.geometries);
+  $('debug-textures').textContent = String(renderer.info.memory.textures);
+  $('debug-scale').textContent = Math.round(renderer.getPixelRatio() * 100) + '%';
+  $('debug-buffer').textContent = Math.round(graphicsBufferSize.x) + ' × ' + Math.round(graphicsBufferSize.y);
+}
+
+setGraphicsDiagnosticsVisible(graphicsDiagnosticsEnabled);
+
 const hemisphereLight = new THREE.HemisphereLight(0x9abfff, 0x101a27, 1.15);
 scene.add(hemisphereLight);
 const keyLight = new THREE.DirectionalLight(0xc0e5ff, 2.45);
@@ -1507,6 +1545,11 @@ renderer.domElement.addEventListener('click', () => {
 renderer.domElement.addEventListener('pointerdown', event => { if (event.button === 0) keys.Mouse0 = true; });
 addEventListener('pointerup', event => { if (event.button === 0) keys.Mouse0 = false; });
 addEventListener('keydown', event => {
+  if (event.code === 'F3') {
+    if (!event.repeat) setGraphicsDiagnosticsVisible(!graphicsDiagnosticsEnabled);
+    event.preventDefault();
+    return;
+  }
   if (intermission) {
     if (event.code === 'Digit1') chooseUpgrade(0);
     else if (event.code === 'Digit2') chooseUpgrade(1);
@@ -1780,7 +1823,8 @@ updateHUD();
 let previous = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
-  const dt = Math.min((now - previous) / 1000, .04);
+  const frameMs = Math.max(0, now - previous);
+  const dt = Math.min(frameMs / 1000, .04);
   previous = now;
   tick(dt);
   dustField.rotation.y += dt * .006;
@@ -1791,5 +1835,6 @@ function animate(now) {
   orangeLight.intensity = 18 + Math.sin(now * .0009 + 1.4) * 1.0;
   perimeterAccentLight.intensity = 7 + Math.sin(now * .0008 + .7) * .45;
   renderer.render(scene, camera);
+  updateGraphicsDiagnostics(frameMs, now);
 }
 animate(previous);
