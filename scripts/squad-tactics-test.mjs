@@ -8,6 +8,7 @@ assert.equal(left.squadId,'wave-3-squad-1');
 assert.equal(left.role,'flank-left');assert.equal(left.strafeSign,-1);
 assert.equal(right.role,'flank-right');assert.equal(right.strafeSign,1);
 assert.equal(gunner.role,'support-left');
+assert.equal(createSquadAssignment('gunner',4,3,4).role,'support-right');
 assert.equal(heavy.role,'anchor');
 assert.equal(createSquadAssignment('scout',5,3,4).squadId,'wave-3-squad-2');
 assert.throws(()=>createSquadAssignment('medic',1,1),/Unknown/);
