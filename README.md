@@ -41,7 +41,7 @@ For development testing, append `?debug=1` to the game URL or press **F3** to sh
 - F: toggle optional auto-fire; T: toggle optional aim assist
 - F3: render diagnostics
 
-Aim assist and auto-fire are optional PvE accessibility assists and are off by default in the standard FPS profile. With both assists disabled, shots follow the centre-screen camera ray. Arena pillars and crates block player movement and projectiles.
+Aim assist and auto-fire are optional PvE accessibility assists and are off by default in the standard FPS profile. With both assists disabled, shots follow the centre-screen camera ray. Player weapons use immediate hitscan with cover occlusion; enemy Gunner attacks remain visible travel-time projectiles. Arena perimeter walls, pillars and crates block player movement and projectiles; the same world geometry occludes player hitscan.
 
 ## Weapons
 
@@ -51,7 +51,7 @@ Aim assist and auto-fire are optional PvE accessibility assists and are off by d
 | 2 | BREACH-7 | Seven-pellet close-range shotgun |
 | 3 | LONGSHOT | High-impact precision weapon |
 
-Switching weapons cancels the current reload but preserves each weapon's remaining magazine.
+Switching weapons cancels the current reload but preserves each weapon's remaining magazine. Rifle, shotgun and precision fire resolve against the nearest world obstruction or enemy hit zone. Head hits deal 2x damage; the Heavy's exposed rear reactor deals 2.4x damage. Shotgun pellets use deterministic cone spread for reproducible combat tests.
 
 ## Wave upgrades
 
@@ -84,6 +84,10 @@ After Pages is enabled, use Run workflow whenever you want to publish a new buil
 
 - index.html — application shell and HUD
 - src/main.js — Three.js scene, controls, enemy AI, combat and game loop
+- src/gameplay/weapon-system.mjs — deterministic weapon state machine
+- src/gameplay/combat.mjs — renderer-independent ballistics and obstruction resolution
+- scripts/combat-test.mjs — deterministic spread and hitscan regression tests
+- docs/COMBAT_SYSTEM.md — combat architecture and weapon tuning specification
 - src/styles.css — interface and responsive styling
 - .github/workflows/quality.yml — syntax and integration checks on every push
 - .github/workflows/deploy.yml — manual GitHub Pages deployment

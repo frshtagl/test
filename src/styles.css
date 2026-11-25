@@ -550,3 +550,6 @@ button.upgrade-option:hover {
 }
 
 .ammo-number .ammo-reserve{display:block;margin-top:2px;color:#8499ad;font:600 7px Orbitron,sans-serif;font-style:normal;letter-spacing:1.1px}
+
+/* Combat 1.8: critical hit confirmation remains readable without obscuring the crosshair. */
+.hitmarker.headshot i{background:#ffe08a;box-shadow:0 0 8px #ffbf55,0 0 15px #ff8a3d}

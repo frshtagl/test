@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator, weaponModule] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator, weaponModule, combatModule, combatDoc] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
@@ -13,7 +13,9 @@ const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, 
   readFile('docs/FPS_MASTER_PROMPT.md', 'utf8'),
   readFile('docs/VTK_ASSET_PIPELINE.md', 'utf8'),
   readFile('tools/vtk/generate_arena_assets.py', 'utf8'),
-  readFile('src/gameplay/weapon-system.mjs', 'utf8')
+  readFile('src/gameplay/weapon-system.mjs', 'utf8'),
+  readFile('src/gameplay/combat.mjs', 'utf8'),
+  readFile('docs/COMBAT_SYSTEM.md', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -86,7 +88,7 @@ assert.match(roadmap, /## 0\.6 — Environment visual upgrade/);
 assert.match(roadmap, /## 0\.7 — Lighting and shadows/);
 assert.match(roadmap, /## 0\.8 — PBR materials and surface response/);
 assert.match(roadmap, /## 0\.9 — Character silhouette and armor detail/);
-assert.match(roadmap, /## 2\.0 — Performance and release QA/);
+assert.match(roadmap, /## 2\.1 — Performance and release QA/);
 assert.ok(ids.includes('graphics-quality'), 'Graphics quality selector is missing');
 assert.ok(ids.includes('graphics-quality-note'), 'Graphics quality feedback is missing');
 assert.match(html, /<option value="low">LOW \/\/ PERFORMANCE<\/option>/);
@@ -122,7 +124,7 @@ assert.ok(js.includes('applySurfaceMaps(metal, industrialSurfaceMaps'), 'Weapon 
 assert.match(readme, /Visual Build 1\.3/);
 assert.match(readme, /## Procedural surface detail/);
 assert.ok(roadmap.includes('## 1.3 — Procedural textures and surface detail'));
-assert.ok(roadmap.includes('## 2.0 — Performance and release QA'));
+assert.ok(roadmap.includes('## 2.1 — Performance and release QA'));
 assert.ok(ids.includes('graphics-debug'), 'Graphics diagnostics panel is missing');
 for (const id of ['debug-fps', 'debug-frame', 'debug-p95', 'debug-draw-calls', 'debug-triangles', 'debug-geometries', 'debug-textures', 'debug-scale', 'debug-buffer']) {
   assert.ok(ids.includes(id), 'Graphics diagnostic field is missing: ' + id);
@@ -137,7 +139,7 @@ assert.ok(js.includes('renderer.getDrawingBufferSize(graphicsBufferSize)'), 'Dra
 assert.match(readme, /## Graphics diagnostics/);
 assert.match(readme, /Visual Build 1\.4/);
 assert.ok(roadmap.includes('## 1.4 — Graphics diagnostics and profiling'));
-assert.ok(roadmap.includes('## 2.0 — Performance and release QA'));
+assert.ok(roadmap.includes('## 2.1 — Performance and release QA'));
 assert.match(graphicsAudit, /Visual Build 1\.4 — Runtime graphics diagnostics/);
 assert.ok(ids.includes('stamina-text') && ids.includes('stamina-bar'), 'Stamina HUD is missing');
 assert.ok(ids.includes('look-sensitivity') && ids.includes('fov-range'), 'FPS look settings are missing');
@@ -200,7 +202,20 @@ assert.match(js, /resolveArenaCollisions/);
 assert.match(js, /dashImpact\.t/);
 assert.match(js, /target = nearestTarget\(\)/);
 assert.doesNotMatch(js, /target = aimAssist \? nearestTarget/);
-assert.match(js, /registerHit\(hitPoint, hitEnemy, shot\.damage\)/);
+assert.ok(js.includes("from './gameplay/combat.mjs'"), 'Combat module import is missing');
+assert.ok(js.includes('function enemyHitTargets()'), 'Enemy hit-zone adapter is missing');
+assert.ok(js.includes('function addBulletTracer('), 'Hitscan tracer is missing');
+assert.ok(js.includes('function addSurfaceImpact('), 'Surface impact feedback is missing');
+assert.match(js, /registerHit\(endpoint, victim, def\.damage \* runModifiers\.damage, hit\)/);
+assert.ok(js.includes("hit.kind==='obstacle'"), 'World obstruction must stop a player shot');
+assert.ok(js.includes("id: 'perimeter-x-' + i"), 'Perimeter X walls must block hitscan');
+assert.ok(js.includes("id: 'perimeter-z-' + i"), 'Perimeter Z walls must block hitscan');
+assert.ok(combatModule.includes('export function generatePelletDirections'));
+assert.ok(combatModule.includes('export function resolveHitscan'));
+assert.ok(combatModule.includes('export function rayAabb'));
+assert.ok(combatModule.includes('export function raySphere'));
+assert.ok(combatDoc.includes('Heavy rear reactor'));
+assert.ok(readme.includes('immediate hitscan with cover occlusion'));
 assert.match(js, /enemy\.rotation\.y = Math\.atan2\(-direction\.x, -direction\.z\)/);
 assert.doesNotMatch(js, /enemy\.userData\.hp -= 1/);
 assert.match(js, /disposeObject3D/);

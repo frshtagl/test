@@ -1,6 +1,7 @@
 import { parseBinarySTL } from './assets/binary-stl.mjs';
 import { createFpsControllerState, resetFpsControllerState, stepFpsController } from './gameplay/fps-controller.mjs';
 import {createWeaponSystem,canFireWeapon,consumeWeaponRound,beginWeaponReload,cancelWeaponReload,requestWeaponSwap,stepWeaponSystem,setWeaponCapacity,resetWeaponSystem} from './gameplay/weapon-system.mjs';
+import {generatePelletDirections,resolveHitscan} from './gameplay/combat.mjs';
 
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
@@ -476,6 +477,8 @@ function addInstancedBoxes(parent, material, entries, castShadow = false) {
 for (let i = -1; i <= 1; i += 2) {
   box(arena, i * 24, 3, 0, 1, 6, 50, wallMat);
   box(arena, 0, 3, i * 24, 50, 6, 1, wallMat);
+  arenaColliders.push({ id: 'perimeter-x-' + i, x: i * 24, z: 0, halfX: .5, halfZ: 25, centerY: 3, halfY: 3, material: 'concrete' });
+  arenaColliders.push({ id: 'perimeter-z-' + i, x: 0, z: i * 24, halfX: 25, halfZ: .5, centerY: 3, halfY: 3, material: 'concrete' });
   box(arena, i * 23.46, 5.42, 0, .075, .075, 46, cyanMat);
   box(arena, 0, 5.42, i * 23.46, 46, .075, .075, cyanMat);
 }
@@ -485,7 +488,7 @@ for (let i = 0; i < 4; i++) {
   const z = Math.sin(a) * 17;
   box(arena, x, 2.8, z, 2, 5.6, 2, wallMat);
   box(arena, x, 4.8, z, 2.1, .12, 2.1, cyanMat);
-  arenaColliders.push({ x, z, halfX: 1, halfZ: 1, centerY: 2.8, halfY: 2.8 });
+  arenaColliders.push({ id: 'pillar-' + i, x, z, halfX: 1, halfZ: 1, centerY: 2.8, halfY: 2.8, material: 'concrete' });
 }
 for (let i = 0; i < 12; i++) {
   const a = i * Math.PI / 6;
@@ -505,7 +508,7 @@ for (let i = 0; i < 10; i++) {
   const z = (Math.random() - .5) * 34;
   if (Math.hypot(x, z) > 8) {
     box(arena, x, .9, z, 2.2, 1.8, 2.2, wallMat);
-    arenaColliders.push({ x, z, halfX: 1.1, halfZ: 1.1, centerY: .9, halfY: .9 });
+    arenaColliders.push({ id: 'crate-' + i, x, z, halfX: 1.1, halfZ: 1.1, centerY: .9, halfY: .9, material: 'composite' });
   }
 }
 
@@ -841,11 +844,12 @@ player.position.set(0, 0, 8);
 playerRig.visible = false;
 const fpsMotion = createFpsControllerState();
 let jumpPressed = false, slidePressed = false, recoilPitch = 0, paused = false;
+let weaponKick = 0, weaponRollKick = 0, shotSequence = 0;
 
 const weapons = {
-  rifle: { name: 'ARC RIFLE', short: 'RIFLE', mag: 30, damage: 29, rate: 145, reload: 1200, pellets: 1, spread: .012, speed: 64, recoil: .014, adsFov: 58, color: 0x50e6f2, description: 'CONTROLLED // FULL AUTO' },
-  shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, speed: 48, recoil: .052, adsFov: 62, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
-  precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, speed: 95, recoil: .038, adsFov: 43, color: 0xb99aff, description: 'HIGH IMPACT // SLOW FIRE' }
+  rifle: { name: 'ARC RIFLE', short: 'RIFLE', mag: 30, damage: 29, rate: 145, reload: 1200, pellets: 1, spread: .012, range: 72, speed: 64, recoil: .014, adsFov: 58, color: 0x50e6f2, description: 'CONTROLLED // FULL AUTO' },
+  shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, range: 27, speed: 48, recoil: .052, adsFov: 62, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
+  precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, range: 110, speed: 95, recoil: .038, adsFov: 43, color: 0xb99aff, description: 'HIGH IMPACT // SLOW FIRE' }
 };
 const weaponSystem=createWeaponSystem(weapons);
 const magazines=weaponSystem.magazines;
@@ -1419,32 +1423,68 @@ function nearestTarget() {
   }
   return best;
 }
+function enemyHitTargets() {
+  return enemies.map(enemy => {
+    const data=enemy.userData,scale=enemy.scale.x||1;
+    const worldPoint=(x,y,z)=>enemy.localToWorld(new THREE.Vector3(x,y,z));
+    const zones=[
+      {zone:'head',center:worldPoint(0,data.type==='scout'?1.96:2.02,-.015),radius:.29*scale,damageMultiplier:2},
+      {zone:'torso',center:worldPoint(0,1.3,-.015),radius:(data.type==='heavy'?.58:data.type==='gunner'?.47:.39)*scale,damageMultiplier:1}
+    ];
+    if(data.type==='heavy')zones.push({zone:'core',center:worldPoint(0,1.58,.67),radius:.12*scale,damageMultiplier:2.4});
+    return{id:enemy.uuid,target:enemy,zones};
+  });
+}
+function addBulletTracer(start,end,color,opacity=.7){
+  const geometry=new THREE.BufferGeometry().setFromPoints([start,end]);
+  const material=new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false,toneMapped:false});
+  const line=new THREE.Line(geometry,material);scene.add(line);
+  effects.push({mesh:line,life:.075,max:.075,kind:'tracer'});
+}
+function addSurfaceImpact(position,normal,surface){
+  const palette={concrete:0x9aabb8,composite:0x65dce8,metal:0xffba72},color=palette[surface]||palette.concrete;
+  const decal=new THREE.Mesh(new THREE.CircleGeometry(surface==='metal'?.075:.09,12),
+    new THREE.MeshBasicMaterial({color,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide,toneMapped:false}));
+  const n=new THREE.Vector3(normal.x,normal.y,normal.z);if(n.lengthSq()<.5)n.set(0,1,0);n.normalize();
+  decal.position.copy(position).addScaledVector(n,.012);decal.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),n);
+  scene.add(decal);effects.push({mesh:decal,life:.58,max:.58,kind:'impact'});
+  if(surface==='metal')addShardBurst(position,color,4,.24);else addBurst(position,color,.075);
+}
 function shoot() {
-  // Fire cadence remains def.rate / runModifiers.fireRate and is enforced by the weapon state module.
+  // Fire cadence is def.rate / runModifiers.fireRate and is enforced by the weapon state machine.
+  // Player fire resolves synchronously against the nearest world obstruction or enemy zone.
   const def=weapons[currentWeapon],shotTime=performance.now();
-  if(!canFireWeapon(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate)||!consumeWeaponRound(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate))return;
+  if(!canFireWeapon(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate)||
+     !consumeWeaponRound(weaponSystem,currentWeapon,shotTime,runModifiers.fireRate))return;
   recoilPitch = Math.min(.18, recoilPitch + def.recoil * (keys.Mouse2 ? .72 : 1));
-  const origin = new THREE.Vector3();
-  muzzle.getWorldPosition(origin);
+  weaponKick=Math.min(.2,weaponKick+def.recoil*(currentWeapon==='shotgun'?2.8:2.1));
+  weaponRollKick=THREE.MathUtils.clamp(weaponRollKick+(currentWeapon==='shotgun'?.035:currentWeapon==='precision'?.018:.009),-.09,.09);
+  const origin=new THREE.Vector3();muzzle.getWorldPosition(origin);
   let baseDirection;
-  if (aimAssist && target) {
-    const aimPoint = target.position.clone().add(new THREE.Vector3(0, 1.25 * target.scale.y, 0));
-    baseDirection = aimPoint.sub(origin).normalize();
-  } else {
-    // Fire through the centre-screen camera ray, not a separately guessed player angle.
-    const cameraForward = camera.getWorldDirection(new THREE.Vector3());
-    const crosshairPoint = camera.position.clone().addScaledVector(cameraForward, 80);
-    baseDirection = crosshairPoint.sub(origin).normalize();
+  if(aimAssist&&target&&enemies.includes(target)){
+    const aimPoint=target.position.clone().add(new THREE.Vector3(0,1.25*target.scale.y,0));baseDirection=aimPoint.sub(origin).normalize();
+  }else{
+    const cameraForward=camera.getWorldDirection(new THREE.Vector3()),crosshairPoint=camera.position.clone().addScaledVector(cameraForward,def.range);
+    baseDirection=crosshairPoint.sub(origin).normalize();
   }
-  for (let i = 0; i < def.pellets; i++) {
-    const direction = baseDirection.clone();
-    direction.x += (Math.random() - .5) * def.spread;
-    direction.y += (Math.random() - .5) * def.spread;
-    direction.z += (Math.random() - .5) * def.spread;
-    projectile(origin, direction, false, def.damage * runModifiers.damage, def.speed, currentWeapon === 'precision' ? 'violet' : currentWeapon === 'shotgun' ? 'orange' : 'cyan');
+  shotSequence=(shotSequence+1)>>>0;
+  const seed=(0x0A2E2026^Math.imul(shotSequence,0x9e3779b9))>>>0;
+  const directions=generatePelletDirections({x:baseDirection.x,y:baseDirection.y,z:baseDirection.z},def.pellets,def.spread,seed);
+  const targets=enemyHitTargets(),tracerColor=currentWeapon==='precision'?0xb99aff:currentWeapon==='shotgun'?0xffad62:0x50e6f2;
+  let criticalHit=false;
+  for(let index=0;index<directions.length;index++){
+    const hit=resolveHitscan({origin:{x:origin.x,y:origin.y,z:origin.z},direction:directions[index],maxDistance:def.range,obstacles:arenaColliders,targets});
+    const endpoint=new THREE.Vector3(hit.point.x,hit.point.y,hit.point.z);
+    if(currentWeapon!=='shotgun'||index<3)addBulletTracer(origin,endpoint,tracerColor,currentWeapon==='shotgun'?.34:.72);
+    if(hit.kind==='enemy'){
+      criticalHit ||= hit.zone==='head'||hit.zone==='core';
+      const victim = hit.target.target;
+      registerHit(endpoint, victim, def.damage * runModifiers.damage, hit);
+      if(!enemies.includes(victim)){const removed=targets.indexOf(hit.target);if(removed>=0)targets.splice(removed,1);}
+    }else if(hit.kind==='obstacle')addSurfaceImpact(endpoint,hit.normal,hit.material);
   }
-  addMuzzleFlash(origin, baseDirection, def.color, currentWeapon);
-  updateAmmoHUD();
+  $('hitmarker').classList.toggle('headshot',criticalHit);
+  addMuzzleFlash(origin,baseDirection,def.color,currentWeapon);updateAmmoHUD();
 }
 // Reload duration uses def.reload / 1000 / runModifiers.reloadSpeed inside the weapon state module.
 function reload() {
@@ -1521,17 +1561,16 @@ function addShardBurst(position, color, count = 8, lifetime = .42) {
   scene.add(mesh);
   effects.push({ mesh, life: lifetime, max: lifetime, velocities, kind: 'shards' });
 }
-function registerHit(position, enemy, damageAmount) {
-  enemy.userData.hp = Math.max(0, enemy.userData.hp - damageAmount);
-  const ratio = THREE.MathUtils.clamp(enemy.userData.hp / enemy.userData.maxHp, 0, 1);
-  enemy.userData.barFill.scale.x = Math.max(.001, ratio);
-  enemy.userData.barFill.position.x = -.6 * (1 - ratio);
-  addBurst(position, enemy.userData.type === 'gunner' ? 0xb99aff : 0xffa15a, .13);
-  enemy.userData.hitFlash = .16;
-  enemy.userData.recoil = .2;
-  hitTimer = .12;
-  $('hitmarker').classList.add('active');
-  if (enemy.userData.hp <= 0) eliminateEnemy(enemy);
+function registerHit(position,enemy,damageAmount,hitInfo={}){
+  const critical=hitInfo.zone==='head'||hitInfo.zone==='core';
+  enemy.userData.hp=Math.max(0,enemy.userData.hp-damageAmount*(hitInfo.damageMultiplier||1));
+  const ratio=THREE.MathUtils.clamp(enemy.userData.hp/enemy.userData.maxHp,0,1);
+  enemy.userData.barFill.scale.x=Math.max(.001,ratio);enemy.userData.barFill.position.x=-.6*(1-ratio);
+  addBurst(position,critical?0xffe08a:enemy.userData.type==='gunner'?0xb99aff:0xffa15a,critical?.21:.13);
+  if(critical)addShardBurst(position,0xffe08a,5,.28);
+  enemy.userData.hitFlash=critical?.22:.16;enemy.userData.recoil=critical?.32:.2;hitTimer=critical?.2:.12;
+  $('hitmarker').classList.add('active');$('hitmarker').classList.toggle('headshot',critical);
+  if(enemy.userData.hp<=0)eliminateEnemy(enemy);
 }
 function eliminateEnemy(enemy) {
   const index = enemies.indexOf(enemy);
@@ -1557,6 +1596,9 @@ function start() {
   jumpPressed = false;
   slidePressed = false;
   recoilPitch = 0;
+  weaponKick = 0;
+  weaponRollKick = 0;
+  shotSequence = 0;
   runModifiers.damage = 1;
   runModifiers.fireRate = 1;
   runModifiers.reloadSpeed = 1;
@@ -1823,8 +1865,10 @@ function tick(dt) {
   camera.updateProjectionMatrix();
   const bob = motion.moving ? Math.sin(motion.bobPhase) * (motion.sprinting ? .021 : .009) : 0;
   const sway = motion.moving ? Math.sin(motion.bobPhase * .5) * .008 : 0;
-  viewModel.position.set(sway, -.025 - motion.crouchBlend * .075 + bob, aiming ? -.045 : 0);
-  viewModel.rotation.set(aiming ? .018 : 0, 0, Math.sin(motion.bobPhase * .5) * (motion.moving ? .012 : .003));
+  weaponKick = Math.max(0, weaponKick - dt * (aiming ? .95 : 1.45));
+  weaponRollKick = THREE.MathUtils.damp(weaponRollKick, 0, 11, dt);
+  viewModel.position.set(sway, -.025 - motion.crouchBlend * .075 + bob - weaponKick, (aiming ? -.045 : 0) + weaponKick * .18);
+  viewModel.rotation.set((aiming ? .018 : 0) + weaponKick * .16, 0, Math.sin(motion.bobPhase * .5) * (motion.moving ? .012 : .003) + weaponRollKick);
   $('game-shell').classList.toggle('is-aiming', aiming);
   $('stamina-bar').style.width = motion.stamina + '%';
   $('stamina-text').textContent = Math.round(motion.stamina) + '%';

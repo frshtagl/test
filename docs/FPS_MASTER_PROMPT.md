@@ -164,3 +164,16 @@ Audit → define narrow acceptance criteria → implement one subsystem → add 
 
 ## Final directive
 Build a dependable FPS first, then expand complexity. Order of priority: feel, fairness, reliability, readability, content, spectacle. Do not trade movement, hit registration, enemy navigation or frame pacing for effects.
+
+
+## Combat 1.8 — Deterministic ballistics and hit registration
+
+- Use immediate hitscan for player rifle, shotgun and precision weapons. Enemy attacks may retain visible travel-time projectiles.
+- Resolve the nearest intersection across world AABB colliders and enemy hit zones. A world obstruction at or before target distance stops the shot; never apply damage through cover.
+- Use deterministic per-shot seeded uniform-cone pellet sampling. Identical base direction, pellet count, spread and seed must reproduce identical directions. Do not use independent random XYZ offsets.
+- Model head (2x), torso (1x) and exposed Heavy rear reactor (2.4x) hit zones. The nearest zone receives damage; frontal fire must not receive the rear-reactor multiplier.
+- Initial weapon ranges: rifle 72 m, shotgun 27 m, precision 110 m. Treat these as gameplay tuning values pending browser review.
+- Surface impacts identify concrete/composite/metal, use readable normals, and dispose transient geometries/materials.
+- Recoil affects camera response and viewmodel animation, then recovers smoothly without runaway accumulation.
+- Automated tests cover deterministic spread, unit vectors, ray/sphere and ray/AABB intersections, hit-zone selection, nearest-hit ordering, maximum range and cover occlusion.
+- Keep combat math independent of Three.js; renderer adapters convert vectors to plain numeric values.
