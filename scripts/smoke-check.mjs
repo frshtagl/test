@@ -23,6 +23,17 @@ for (const id of ['game', 'start-button', 'restart-button', 'aim-toggle', 'fire-
 assert.match(html, /href=["']\.\/src\/styles\.css["']/);
 assert.match(html, /src=["']\.\/src\/main\.js["']/);
 assert.match(js, /camera\.getWorldDirection/);
+assert.match(js, /const playerRig = new THREE\\.Group\\(\\)/);
+assert.match(js, /function buildPlayerArm\\(/);
+assert.match(js, /function buildPlayerLeg\\(/);
+assert.match(js, /playerParts\\.leftLeg\\.hip\\.rotation\\.x/);
+assert.match(js, /function buildEnemyLimb\\(/);
+assert.match(js, /new THREE\\.OctahedronGeometry/);
+assert.match(js, /new THREE\\.DodecahedronGeometry/);
+assert.match(js, /new THREE\\.TorusGeometry/);
+assert.match(js, /data\\.legs\\.left\\.upper\\.rotation\\.x/);
+assert.match(js, /data\\.hitFlash/);
+assert.match(js, /data\\.recoil/);
 assert.match(js, /new THREE\.FogExp2/);
 assert.match(js, /new THREE\.RingGeometry/);
 assert.match(js, /dustField\.rotation\.y/);
