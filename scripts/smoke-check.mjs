@@ -97,7 +97,7 @@ assert.match(roadmap, /## 0\.6 — Environment visual upgrade/);
 assert.match(roadmap, /## 0\.7 — Lighting and shadows/);
 assert.match(roadmap, /## 0\.8 — PBR materials and surface response/);
 assert.match(roadmap, /## 0\.9 — Character silhouette and armor detail/);
-assert.match(roadmap, /## 2\.1 — Performance and release QA/);
+assert.match(roadmap, /## 2\.2 — Performance and release QA/);
 assert.ok(ids.includes('graphics-quality'), 'Graphics quality selector is missing');
 assert.ok(ids.includes('graphics-quality-note'), 'Graphics quality feedback is missing');
 assert.match(html, /<option value="low">LOW \/\/ PERFORMANCE<\/option>/);
