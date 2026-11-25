@@ -60,7 +60,10 @@
 - [x] Refined fog density, exposure and ambient/key/rim light balance
 - [x] Tighter directional shadow-camera bounds and bias tuning
 - [x] Added restrained perimeter fill illumination without another shadow map
-- [ ] Further PBR material and surface-detail pass
+- [x] PBR roughness/metalness tuning across floor, walls, architecture, player, enemies and weapons
+- [x] Separate emissive intensity controls for energy materials
+- [x] Clear-coated physical material for the player visor
+- [ ] Additional texture/normal detail and material wear
 - [ ] PBR material and surface-detail pass
 - [ ] Character, enemy and weapon visual refinement
 - [ ] Combat VFX and animation polish

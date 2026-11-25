@@ -72,22 +72,28 @@ const perimeterAccentLight = new THREE.PointLight(0x269bc8, 7, 23);
 perimeterAccentLight.position.set(18, 3.8, 16);
 scene.add(perimeterAccentLight);
 
-const mat = (color, roughness = .7, metalness = .1, emissive = 0) =>
-  new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity: emissive ? 1.5 : 0 });
-const floorMat = mat(0x0c1723, .72, .48, 0x06101b);
-const wallMat = mat(0x1a2a3b, .62, .58, 0x050d16);
-const cyanMat = mat(0x24d8ed, .35, .4, 0x087b90);
-const orangeMat = mat(0xff7a43, .4, .3, 0x8a260c);
-const violetMat = mat(0xb58aff, .35, .3, 0x5426a8);
+const mat = (color, roughness = .7, metalness = .1, emissive = 0, emissiveIntensity = 1.5) =>
+  new THREE.MeshStandardMaterial({
+    color,
+    roughness: THREE.MathUtils.clamp(roughness, .04, 1),
+    metalness: THREE.MathUtils.clamp(metalness, 0, 1),
+    emissive,
+    emissiveIntensity: emissive ? emissiveIntensity : 0
+  });
+const floorMat = mat(0x0c1723, .86, .34, 0x030811, .2);
+const wallMat = mat(0x1a2a3b, .56, .7, 0x030912, .3);
+const cyanMat = mat(0x24d8ed, .28, .32, 0x087b90, 1.1);
+const orangeMat = mat(0xff7a43, .34, .28, 0x8a260c, .85);
+const violetMat = mat(0xb58aff, .3, .28, 0x5426a8, .95);
 
 // Shared materials for the industrial arena architecture pass.
-const architecturePanelMat = mat(0x20364a, .48, .78, 0x040a11);
-const architectureRibMat = mat(0x526d80, .36, .82, 0x07111a);
-const architectureRailMat = mat(0x304b60, .4, .8);
-const architectureVentMat = mat(0x091521, .82, .38);
-const architectureVentSlatMat = mat(0x6b8190, .42, .78);
-const architectureFixtureMat = mat(0x142a3c, .34, .76);
-const architectureWarningMat = mat(0xff9a55, .42, .38, 0x5a2109);
+const architecturePanelMat = mat(0x20364a, .56, .68, 0x040a11, .25);
+const architectureRibMat = mat(0x526d80, .34, .78, 0x07111a, .3);
+const architectureRailMat = mat(0x304b60, .42, .72);
+const architectureVentMat = mat(0x091521, .9, .28);
+const architectureVentSlatMat = mat(0x6b8190, .38, .74);
+const architectureFixtureMat = mat(0x142a3c, .48, .68);
+const architectureWarningMat = mat(0xff9a55, .36, .28, 0x5a2109, .8);
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), floorMat);
 floor.rotation.x = -Math.PI / 2;
@@ -321,10 +327,19 @@ const player = new THREE.Group();
 scene.add(player);
 const playerRig = new THREE.Group();
 player.add(playerRig);
-const playerArmor = mat(0x294a63, .38, .72);
-const playerDark = mat(0x101d2b, .48, .72);
-const playerJoint = mat(0x657f91, .42, .72);
-const playerCore = mat(0x42e8f2, .25, .35, 0x16a9bd);
+const playerArmor = mat(0x294a63, .42, .68);
+const playerDark = mat(0x101d2b, .56, .66);
+const playerJoint = mat(0x657f91, .34, .76);
+const playerCore = mat(0x42e8f2, .26, .3, 0x16a9bd, 1.8);
+const playerVisorMat = new THREE.MeshPhysicalMaterial({
+  color: 0x164b62,
+  metalness: .42,
+  roughness: .16,
+  clearcoat: .92,
+  clearcoatRoughness: .12,
+  emissive: 0x052b39,
+  emissiveIntensity: .65
+});
 const playerTorso = new THREE.Mesh(new THREE.CapsuleGeometry(.39, .62, 6, 12), playerArmor);
 playerTorso.position.set(0, 1.3, 0);
 playerTorso.castShadow = true;
@@ -350,7 +365,7 @@ const helmet = new THREE.Mesh(new THREE.SphereGeometry(.29, 18, 14), playerArmor
 helmet.scale.set(1.08, 1.12, 1);
 helmet.castShadow = true;
 headRig.add(helmet);
-box(headRig, 0, -.015, -.265, .43, .12, .075, playerCore);
+box(headRig, 0, -.015, -.265, .43, .12, .075, playerVisorMat);
 box(headRig, 0, .17, .035, .34, .09, .32, playerDark);
 for (const side of [-1, 1]) {
   const ear = new THREE.Mesh(new THREE.BoxGeometry(.09, .2, .2), playerJoint);
@@ -435,12 +450,13 @@ function buildWeaponVisual() {
   disposeObject3D(gunGroup);
   gunGroup.clear();
   const def = weapons[currentWeapon];
-  const metal = mat(currentWeapon === 'shotgun' ? 0x9b795b : currentWeapon === 'precision' ? 0x8d83b4 : 0x9baebe, .28, .86);
-  const darkMetal = mat(0x172635, .38, .78);
+  const metal = mat(currentWeapon === 'shotgun' ? 0x9b795b : currentWeapon === 'precision' ? 0x8d83b4 : 0x9baebe, .3, .84);
+  const darkMetal = mat(0x172635, .48, .74);
   const glow = mat(
     currentWeapon === 'shotgun' ? 0xff7a43 : currentWeapon === 'precision' ? 0xb58aff : 0x24d8ed,
-    .28, .45,
-    currentWeapon === 'shotgun' ? 0x8a260c : currentWeapon === 'precision' ? 0x5426a8 : 0x087b90
+    .28, .38,
+    currentWeapon === 'shotgun' ? 0x8a260c : currentWeapon === 'precision' ? 0x5426a8 : 0x087b90,
+    1.15
   );
   const isShotgun = currentWeapon === 'shotgun';
   const isPrecision = currentWeapon === 'precision';
@@ -626,11 +642,11 @@ function makeEnemy() {
   enemy.scale.setScalar(cfg.scale);
   const rig = new THREE.Group();
   enemy.add(rig);
-  const shell = mat(cfg.color, .38, .76, 0x180d18);
-  const dark = mat(type === 'heavy' ? 0x263644 : 0x182536, .48, .78);
-  const joint = mat(type === 'scout' ? 0x7d5147 : type === 'gunner' ? 0x77709d : 0x8093a1, .38, .78);
-  const core = mat(cfg.eye, .22, .38, cfg.eye);
-  const accent = mat(type === 'scout' ? 0xff9a57 : type === 'gunner' ? 0xc3a0ff : 0xff6f54, .28, .48, cfg.eye);
+  const shell = mat(cfg.color, .42, .68, 0x180d18, .28);
+  const dark = mat(type === 'heavy' ? 0x263644 : 0x182536, .56, .7);
+  const joint = mat(type === 'scout' ? 0x7d5147 : type === 'gunner' ? 0x77709d : 0x8093a1, .36, .72);
+  const core = mat(cfg.eye, .24, .32, cfg.eye, 1.8);
+  const accent = mat(type === 'scout' ? 0xff9a57 : type === 'gunner' ? 0xc3a0ff : 0xff6f54, .32, .4, cfg.eye, 1.2);
   const torsoGeometry = type === 'scout'
     ? new THREE.CapsuleGeometry(.31, .58, 5, 9)
     : type === 'heavy'
@@ -772,7 +788,7 @@ function makeEnemy() {
   const barBack = new THREE.Mesh(new THREE.BoxGeometry(1.25, .09, .06), mat(0x101820));
   barBack.position.set(0, barY, 0);
   enemy.add(barBack);
-  const barFill = new THREE.Mesh(new THREE.BoxGeometry(1.2, .055, .07), mat(0x69f2b7, .4, .1, 0x176b45));
+  const barFill = new THREE.Mesh(new THREE.BoxGeometry(1.2, .055, .07), mat(0x69f2b7, .45, .08, 0x176b45, .9));
   barFill.position.set(0, barY, -.045);
   enemy.add(barFill);
 

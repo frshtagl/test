@@ -36,6 +36,12 @@ assert.ok(js.includes("lockRequest.catch("), 'Pointer-lock rejection must not bl
 assert.doesNotMatch(js, /\$\(['"]start-button['"]\)\.addEventListener\('click'/, 'Start click must not depend on late module initialization');
 assert.match(js, /camera\.getWorldDirection/);
 assert.ok(js.includes('const playerRig = new THREE.Group()'));
+assert.ok(js.includes('emissiveIntensity = 1.5'), 'Material helper must expose emissive intensity');
+assert.ok(js.includes('roughness: THREE.MathUtils.clamp(roughness, .04, 1)'), 'PBR roughness must be bounded');
+assert.ok(js.includes('metalness: THREE.MathUtils.clamp(metalness, 0, 1)'), 'PBR metalness must be bounded');
+assert.ok(js.includes('const playerVisorMat = new THREE.MeshPhysicalMaterial('), 'Clear-coated visor material is missing');
+assert.ok(js.includes('clearcoat: .92'), 'Visor clearcoat setting is missing');
+assert.match(readme, /Visual Build 0\.8/);
 assert.ok(js.includes('function addInstancedBoxes('), 'Instanced architecture helper is missing');
 assert.ok(js.includes('function buildArenaArchitectureDetails()'), 'Arena architecture detail pass is missing');
 assert.ok(js.includes('buildArenaArchitectureDetails();'), 'Arena architecture detail pass is not initialized');
