@@ -21,7 +21,7 @@ Each enemy checks line of sight from its upper body to the player. It updates it
 ## Barricade lifecycle
 - Up to four VTK barricades are selected from free arena positions. Placement checks prevent overlap with existing crates and pillars.
 - A procedural Three.js barricade and its collider are created synchronously. A successfully loaded VTK mesh replaces the visual only; the collision proxy remains unchanged.
-- The proxy is a conservative rotated AABB derived from the source mesh bounds. It participates in player/enemy movement, line of sight, hitscan and projectile collision.
+- The proxy is a conservative rotated AABB derived from the source mesh bounds. It participates in player/enemy movement, line of sight, hitscan and projectile collision. Crouching lowers the player's exposure point: a player tucked behind chest-high cover can break enemy sight and force Gunner projectiles into the barricade, while standing exposes a higher target point.
 - Player hitscan and hostile projectiles can damage barricades. Health stages are intact, damaged, critical and destroyed; the health indicator appears briefly after a hit.
 - On destruction the barricade is hidden, its collider is removed, the A* grid is rebuilt and every active enemy route is invalidated.
 
