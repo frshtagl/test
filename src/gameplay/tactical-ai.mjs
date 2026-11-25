@@ -111,7 +111,7 @@ function ringGoal({type,position,target,grid,obstacles,strafeSign}){
     const candidate={x:clamp(target.x+Math.cos(angle)*radius,grid.min,grid.max),z:clamp(target.z+Math.sin(angle)*radius,grid.min,grid.max)};
     if(!isWalkablePosition(grid,candidate))continue;
     const visible=hasLineOfSight2D(candidate,target,obstacles,.06);
-    const score=distance(position,candidate)+(angleDelta(angle,preferred)*(type==='scout'?3.2:type==='heavy'?1.5:1.25))+(visible?0:type==='gunner'?80:4);
+    const score=distance(position,candidate)+(angleDelta(angle,preferred)*(type==='scout'?3.2:type==='heavy'?1.5:1.25))+(visible?0:type==='gunner'?80:type==='scout'?22:14);
     if(score<bestScore){bestScore=score;best=candidate;}
   }
   if(best)return best;
