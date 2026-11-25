@@ -3,35 +3,50 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 const $ = id => document.getElementById(id);
 const root = $('game');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x080f1b);
-scene.fog = new THREE.Fog(0x080f1b, 25, 85);
+scene.background = new THREE.Color(0x070d18);
+scene.fog = new THREE.FogExp2(0x070d18, .018);
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, .1, 150);
+camera.position.set(0, 12, 29);
+camera.lookAt(0, 1, 0);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
 renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.18;
 root.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0x9abfff, 0x18212d, 2));
-const keyLight = new THREE.DirectionalLight(0x9edcff, 2.1);
+scene.add(new THREE.HemisphereLight(0x9abfff, 0x101a27, 1.35));
+const keyLight = new THREE.DirectionalLight(0xc0e5ff, 2.6);
 keyLight.position.set(-12, 22, 8);
 keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.shadow.mapSize.set(1536, 1536);
+keyLight.shadow.camera.left = -28;
+keyLight.shadow.camera.right = 28;
+keyLight.shadow.camera.top = 28;
+keyLight.shadow.camera.bottom = -28;
+keyLight.shadow.camera.near = .5;
+keyLight.shadow.camera.far = 70;
+keyLight.shadow.bias = -.00018;
+keyLight.shadow.normalBias = .025;
+keyLight.shadow.radius = 4;
 scene.add(keyLight);
-const cyanLight = new THREE.PointLight(0x16cde8, 25, 35);
+const rimLight = new THREE.DirectionalLight(0x4c7cff, .8);
+rimLight.position.set(14, 10, -18);
+scene.add(rimLight);
+const cyanLight = new THREE.PointLight(0x16cde8, 34, 42);
 cyanLight.position.set(0, 6, 0);
 scene.add(cyanLight);
-const orangeLight = new THREE.PointLight(0xff653d, 18, 30);
+const orangeLight = new THREE.PointLight(0xff653d, 22, 36);
 orangeLight.position.set(-18, 5, -15);
 scene.add(orangeLight);
 
 const mat = (color, roughness = .7, metalness = .1, emissive = 0) =>
   new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity: emissive ? 1.5 : 0 });
-const floorMat = mat(0x111d2a, .9, .3);
-const wallMat = mat(0x1c2b3c, .8, .45);
+const floorMat = mat(0x0c1723, .72, .48, 0x06101b);
+const wallMat = mat(0x1a2a3b, .62, .58, 0x050d16);
 const cyanMat = mat(0x24d8ed, .35, .4, 0x087b90);
 const orangeMat = mat(0xff7a43, .4, .3, 0x8a260c);
 const violetMat = mat(0xb58aff, .35, .3, 0x5426a8);
@@ -41,8 +56,43 @@ floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 const grid = new THREE.GridHelper(70, 35, 0x24516a, 0x1b3448);
-grid.position.y = .012;
+grid.position.y = .014;
+grid.material.transparent = true;
+grid.material.opacity = .38;
 scene.add(grid);
+
+const floorRingPulses = [];
+function addFloorRing(inner, outer, color, opacity, thetaStart = 0, thetaLength = Math.PI * 2) {
+  const material = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false
+  });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 160, 1, thetaStart, thetaLength), material);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = .026;
+  scene.add(ring);
+  floorRingPulses.push({ material, base: opacity, phase: thetaStart });
+  return ring;
+}
+addFloorRing(8.7, 8.82, 0x19c5dc, .24);
+addFloorRing(20.8, 20.94, 0x19c5dc, .2);
+for (let i = 0; i < 8; i++) {
+  addFloorRing(22.1, 22.22, i % 2 ? 0xff8152 : 0x27d9e9, .32, i * Math.PI / 4, Math.PI / 12);
+}
+
+const dustCount = 180;
+const dustPositions = new Float32Array(dustCount * 3);
+for (let i = 0; i < dustCount; i++) {
+  dustPositions[i * 3] = (Math.random() - .5) * 48;
+  dustPositions[i * 3 + 1] = .5 + Math.random() * 7;
+  dustPositions[i * 3 + 2] = (Math.random() - .5) * 48;
+}
+const dustGeometry = new THREE.BufferGeometry();
+dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+const dustField = new THREE.Points(dustGeometry, new THREE.PointsMaterial({
+  color: 0x8bddeb, size: .065, transparent: true, opacity: .48, depthWrite: false, sizeAttenuation: true
+}));
+scene.add(dustField);
+
 const arena = new THREE.Group();
 scene.add(arena);
 const arenaColliders = [];
@@ -58,6 +108,8 @@ function box(parent, x, y, z, sx, sy, sz, material) {
 for (let i = -1; i <= 1; i += 2) {
   box(arena, i * 24, 3, 0, 1, 6, 50, wallMat);
   box(arena, 0, 3, i * 24, 50, 6, 1, wallMat);
+  box(arena, i * 23.46, 5.42, 0, .075, .075, 46, cyanMat);
+  box(arena, 0, 5.42, i * 23.46, 46, .075, .075, cyanMat);
 }
 for (let i = 0; i < 4; i++) {
   const a = i * Math.PI / 2;
@@ -70,6 +122,15 @@ for (let i = 0; i < 4; i++) {
 for (let i = 0; i < 12; i++) {
   const a = i * Math.PI / 6;
   box(arena, Math.cos(a) * 22, .2, Math.sin(a) * 22, .35, .4, .35, cyanMat);
+}
+for (let i = 0; i < 4; i++) {
+  const a = i * Math.PI / 2 + Math.PI / 4;
+  const beacon = new THREE.Mesh(
+    new THREE.CylinderGeometry(.07, .22, 4.6, 10, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0x39d9eb, transparent: true, opacity: .085, side: THREE.DoubleSide, depthWrite: false })
+  );
+  beacon.position.set(Math.cos(a) * 21.7, 2.3, Math.sin(a) * 21.7);
+  scene.add(beacon);
 }
 for (let i = 0; i < 10; i++) {
   const x = (Math.random() - .5) * 34;
@@ -741,6 +802,12 @@ function animate(now) {
   const dt = Math.min((now - previous) / 1000, .04);
   previous = now;
   tick(dt);
+  dustField.rotation.y += dt * .006;
+  for (const ring of floorRingPulses) {
+    ring.material.opacity = ring.base + Math.sin(now * .00135 + ring.phase) * .035;
+  }
+  cyanLight.intensity = 34 + Math.sin(now * .0011) * 2.2;
+  orangeLight.intensity = 22 + Math.sin(now * .0009 + 1.4) * 1.5;
   renderer.render(scene, camera);
 }
 animate(previous);
