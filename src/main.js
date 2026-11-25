@@ -2082,6 +2082,8 @@ function tick(dt) {
   if (autoFire && target) shoot();
   else if (keys.Mouse0) shoot();
 
+  // Crouching lowers the exposed target point, allowing chest-high cover to break enemy sight and fire lanes.
+  const playerExposureHeight = THREE.MathUtils.lerp(1.55, .82, motion.crouchBlend);
   for (const enemy of enemies) {
     const data = enemy.userData;
     const brain = data.brain;
@@ -2089,7 +2091,7 @@ function tick(dt) {
     const distance = toPlayer.length();
     const direction = distance > .001 ? toPlayer.clone().normalize() : new THREE.Vector3(0, 0, -1);
     const sightOrigin = enemy.position.clone().add(new THREE.Vector3(0, 1.25 * enemy.scale.y, 0));
-    const sightTarget = player.position.clone().add(new THREE.Vector3(0, 1.05, 0));
+    const sightTarget = player.position.clone().add(new THREE.Vector3(0, playerExposureHeight, 0));
     const hasLineOfSight = !segmentObstacleHit(sightOrigin, sightTarget);
 
     // Enemies only update their last-known position when the player is actually visible.
@@ -2167,7 +2169,7 @@ function tick(dt) {
     if (attackStep.attack) {
       if (data.type === 'gunner') {
         const from = enemy.position.clone().add(new THREE.Vector3(0, 1.25 * enemy.scale.y, 0));
-        const to = player.position.clone().add(new THREE.Vector3(0, 1, 0));
+        const to = player.position.clone().add(new THREE.Vector3(0, playerExposureHeight, 0));
         projectile(from, to.sub(from), true, data.damage, 17, 'orange');
         data.recoil = .42;
         addBurst(from, 0xb99aff, .13);
@@ -2236,7 +2238,7 @@ function tick(dt) {
         hit = true;
       }
     } else {
-      const playerCenter = player.position.clone().add(new THREE.Vector3(0, 1, 0));
+      const playerCenter = player.position.clone().add(new THREE.Vector3(0, playerExposureHeight, 0));
       const closest = closestPointOnSegment(playerCenter, segmentStart, segmentEnd);
       if (closest.distanceToSquared(playerCenter) < .8 * .8) {
         const playerImpactT = segmentParameter(closest, segmentStart, segmentEnd);
