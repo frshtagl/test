@@ -16,7 +16,7 @@
     <div class="vignette"></div>
     <div id="damage-flash" class="damage-flash"></div>
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // 0.2</small></div></div>
+      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // VISUAL BUILD 0.3</small></div></div>
       <div class="wave-block"><small>SECTOR</small><strong id="wave">01</strong><span id="phase">STANDBY</span></div>
       <div class="top-right"><span class="live-dot"></span> SYSTEM ONLINE</div>
     </header>
@@ -57,12 +57,25 @@
     </aside>
     <div id="start-screen" class="overlay">
       <div class="start-card">
-        <div class="eyebrow">ROGUE PROTOCOL // INITIATED</div>
+        <div class="start-card__topline">
+          <div class="eyebrow"><span class="eyebrow-dot"></span> ROGUE PROTOCOL // INITIATED</div>
+          <div class="start-status"><span class="live-dot"></span> SYSTEM READY</div>
+        </div>
         <h1>ARENA<span>ZERO</span></h1>
         <p>THE MACHINES HAVE TAKEN THE SECTOR.<br>YOU ARE THE LAST LINE OF DEFENCE.</p>
-        <div class="start-meta"><span>MODE <b>ENDLESS PvE</b></span><span>LOADOUT <b>3 WEAPONS</b></span><span>THREATS <b>3 CLASSES</b></span></div>
-        <button id="start-button">ENTER THE ARENA <span>↗</span></button>
-        <small>WASD MOVE · MOUSE LOOK · 1/2/3 SWITCH WEAPONS · AUTO COMBAT OPTIONAL</small>
+        <div class="start-meta">
+          <span>MODE <b>ENDLESS PvE</b></span>
+          <span>LOADOUT <b>3 WEAPONS</b></span>
+          <span>THREATS <b>3 CLASSES</b></span>
+        </div>
+        <button id="start-button" class="start-cta" type="button" aria-label="Deploy into Arena Zero and start a new PvE run">
+          <span class="start-cta__copy"><strong>DEPLOY INTO ARENA</strong><small>INITIALIZE NEW RUN // PvE</small></span>
+          <span class="start-cta__arrow" aria-hidden="true">↗</span>
+        </button>
+        <div class="start-card__footer">
+          <span><i class="live-dot"></i> ALL SYSTEMS NOMINAL</span>
+          <small>WASD MOVE · MOUSE LOOK · 1–3 SWITCH WEAPONS</small>
+        </div>
       </div>
     </div>
     <div id="end-screen" class="overlay hidden">
@@ -70,7 +83,10 @@
         <div class="eyebrow">SIGNAL LOST</div><h1>RUN<span> OVER</span></h1>
         <p>THE MACHINES CLAIMED THIS SECTOR.<br>YOUR NEXT RUN STARTS NOW.</p>
         <div class="final-score">ELIMINATIONS <b id="final-kills">0</b> <span>WAVE <b id="final-wave">1</b></span></div>
-        <button id="restart-button">REDEPLOY <span>↗</span></button>
+        <button id="restart-button" class="start-cta" type="button" aria-label="Redeploy and start a new run">
+          <span class="start-cta__copy"><strong>REDEPLOY</strong><small>RESET SIMULATION // NEW RUN</small></span>
+          <span class="start-cta__arrow" aria-hidden="true">↗</span>
+        </button>
       </div>
     </div>
     <div class="footer-note">ARENA ZERO <span>•</span> SURVIVE THE MACHINE</div>
