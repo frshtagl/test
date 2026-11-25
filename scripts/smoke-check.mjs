@@ -119,6 +119,22 @@ assert.match(readme, /Visual Build 1\.3/);
 assert.match(readme, /## Procedural surface detail/);
 assert.ok(roadmap.includes('## 1.3 — Procedural textures and surface detail'));
 assert.ok(roadmap.includes('## 1.5 — Performance and visual QA'));
+assert.ok(ids.includes('graphics-debug'), 'Graphics diagnostics panel is missing');
+for (const id of ['debug-fps', 'debug-frame', 'debug-p95', 'debug-draw-calls', 'debug-triangles', 'debug-geometries', 'debug-textures', 'debug-scale', 'debug-buffer']) {
+  assert.ok(ids.includes(id), 'Graphics diagnostic field is missing: ' + id);
+}
+assert.ok(js.includes("new URLSearchParams(window.location.search).get('debug') === '1'"), 'URL debug toggle is missing');
+assert.ok(js.includes("if (event.code === 'F3')"), 'F3 debug toggle is missing');
+assert.ok(js.includes('function updateGraphicsDiagnostics(frameMs, now)'), 'Graphics diagnostics updater is missing');
+assert.ok(js.includes('renderer.info.render.calls'), 'Draw-call telemetry is missing');
+assert.ok(js.includes('renderer.info.render.triangles'), 'Triangle telemetry is missing');
+assert.ok(js.includes('renderer.info.memory.textures'), 'Texture memory count is missing');
+assert.ok(js.includes('renderer.getDrawingBufferSize(graphicsBufferSize)'), 'Drawing-buffer telemetry is missing');
+assert.match(readme, /## Graphics diagnostics/);
+assert.match(readme, /Visual Build 1\.4/);
+assert.ok(roadmap.includes('## 1.4 — Graphics diagnostics and profiling'));
+assert.ok(roadmap.includes('## 1.6 — Performance and visual QA'));
+assert.match(graphicsAudit, /Visual Build 1\.4 — Runtime graphics diagnostics/);
 assert.match(graphicsAudit, /Visual Build 1\.3 — Procedural texture and surface detail/);
 assert.match(graphicsAudit, /No external image downloads/);
 assert.ok(js.includes('function buildPlayerLeg('));

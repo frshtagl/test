@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A third-person PvE browser arena shooter built with Three.js. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
+A third-person PvE browser arena shooter built with Three.js. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. Visual Build 1.4 adds an opt-in render telemetry panel for frame cadence, draw calls, triangle count, geometry/texture counts and drawing-buffer resolution. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
 
 ## Run locally
 
@@ -17,6 +17,10 @@ Choose Low, Medium, High or Ultra on the deployment screen. The renderer applies
 ## Procedural surface detail
 
 The arena floor, industrial structures, player armor, weapons and enemy armor use locally generated color, normal and roughness maps. The maps are deterministic, mipmapped and anisotropically filtered where supported; no external texture downloads are required.
+
+## Graphics diagnostics
+
+For development testing, append `?debug=1` to the game URL or press **F3** to show/hide the diagnostics panel. It reports average FPS estimated from frame intervals, average and 95th-percentile frame intervals, draw calls, triangles, active geometry/texture counts, render scale and drawing-buffer resolution. These are browser-side indicators, not direct GPU-time measurements.
 
 ## Controls
 

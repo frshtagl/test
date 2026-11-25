@@ -118,12 +118,20 @@
 - [ ] Browser inspection for texture scale, seams and material balance
 - [ ] Texture memory and startup-time profiling
 
-## 1.4 — Animation and camera polish
+## 1.4 — Graphics diagnostics and profiling
+- [x] Add optional F3 / ?debug=1 render telemetry overlay
+- [x] Track rolling average FPS and average frame interval
+- [x] Track 95th-percentile frame interval
+- [x] Display renderer draw calls, triangles, geometry and texture counts
+- [x] Display effective render scale and drawing-buffer resolution
+- [ ] Capture baseline and per-quality-tier metrics on real devices
+
+## 1.5 — Animation and camera polish
 - [ ] Player weapon handling and reload animation refinement
 - [ ] Enemy attack and death animation refinement
 - [ ] Third-person camera collision and response review
 
-## 1.5 — Performance and visual QA
+## 1.6 — Performance and visual QA
 - [ ] Before/after browser screenshots
 - [ ] Desktop and mobile visual review
 - [ ] FPS, frame-time and draw-call measurements

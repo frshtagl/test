@@ -16,7 +16,7 @@
     <div class="vignette"></div>
     <div id="damage-flash" class="damage-flash"></div>
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // VISUAL BUILD 1.3</small></div></div>
+      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // VISUAL BUILD 1.4</small></div></div>
       <div class="wave-block"><small>SECTOR</small><strong id="wave">01</strong><span id="phase">STANDBY</span></div>
       <div class="top-right"><span class="live-dot"></span> SYSTEM ONLINE <span class="upgrade-counter">UPGRADES <b id="upgrade-count">00</b></span></div>
     </header>
@@ -27,6 +27,18 @@
       <div class="stat best-stat"><small>PERSONAL BEST</small><strong id="best-kills">000</strong></div>
     </section>
     <div id="toast" class="toast">WAVE 01 // HOSTILES DETECTED</div>
+    <aside id="graphics-debug" class="graphics-debug hidden" aria-label="Graphics performance diagnostics" aria-live="off">
+      <div class="graphics-debug__title">RENDER TELEMETRY <kbd>F3</kbd></div>
+      <div><span>FPS</span><b id="debug-fps">--</b></div>
+      <div><span>FRAME AVG</span><b id="debug-frame">--</b></div>
+      <div><span>FRAME P95</span><b id="debug-p95">--</b></div>
+      <div><span>DRAW CALLS</span><b id="debug-draw-calls">--</b></div>
+      <div><span>TRIANGLES</span><b id="debug-triangles">--</b></div>
+      <div><span>GEOMETRIES</span><b id="debug-geometries">--</b></div>
+      <div><span>TEXTURES</span><b id="debug-textures">--</b></div>
+      <div><span>RENDER SCALE</span><b id="debug-scale">--</b></div>
+      <div class="graphics-debug__buffer"><span>DRAW BUFFER</span><b id="debug-buffer">--</b></div>
+    </aside>
     <div class="crosshair"><i></i><b></b><i></i><b></b></div>
     <div id="hitmarker" class="hitmarker"><i></i><i></i><i></i><i></i></div>
     <div id="lock-label" class="lock-label">TARGET ACQUIRED</div>

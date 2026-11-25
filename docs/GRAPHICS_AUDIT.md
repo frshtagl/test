@@ -63,6 +63,14 @@ This is a source and repository audit, not a live GPU benchmark. No browser-rend
 
 The source and smoke-test checks can confirm that the texture pipeline is wired into the intended materials, but they cannot establish whether the surface scale, normal strength, seams, GPU memory or startup cost look acceptable on a real device. Browser screenshots and runtime profiling remain required.
 
+## Visual Build 1.4 — Runtime graphics diagnostics
+
+- Added an opt-in overlay, hidden during normal play.
+- Enable it with `?debug=1` or toggle it with F3.
+- Reports rolling average FPS estimated from frame intervals, average frame interval, p95 frame interval, renderer draw calls, triangles, geometry count, texture count, render scale and drawing-buffer resolution.
+- The panel updates at a throttled interval and does not add a visible HUD element during ordinary play.
+- These are browser-side indicators; they do not expose direct GPU timing.
+
 ## Next milestone
 
-Inspect the actual rendered textures for tiling, seam visibility, excessive bumpiness and color balance. Then refine animation/camera presentation and profile texture memory and frame times before considering larger maps or more expensive post-processing.
+Use the diagnostics panel and real browser screenshots to inspect the procedural textures for tiling, seam visibility, excessive bumpiness and color balance. Then refine animation/camera presentation and profile texture memory and frame times before considering larger maps or more expensive post-processing.
