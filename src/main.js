@@ -3,6 +3,7 @@ import { createFpsControllerState, resetFpsControllerState, stepFpsController } 
 import {createWeaponSystem,canFireWeapon,consumeWeaponRound,beginWeaponReload,cancelWeaponReload,requestWeaponSwap,stepWeaponSystem,setWeaponCapacity,resetWeaponSystem} from './gameplay/weapon-system.mjs';
 import {generatePelletDirections,resolveHitscan} from './gameplay/combat.mjs';
 import {createNavigationGrid,createTacticalBrain,stepTacticalBrain,updateTacticalPath} from './gameplay/tactical-ai.mjs';
+import {createCoverState,applyCoverDamage} from './gameplay/cover-system.mjs';
 
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
@@ -513,8 +514,127 @@ for (let i = 0; i < 10; i++) {
   }
 }
 
-// Static navigation grid: conservative clearance keeps all three enemy silhouettes out of cover.
-const enemyNavigationGrid = createNavigationGrid(arenaColliders, { min: -22, max: 22, cellSize: 1.5, clearance: .86 });
+// VTK barricades receive a synchronous fallback mesh and collider before the first frame.
+
+const coverRuntime = new Map();
+
+function createFallbackCoverVisual() {
+  const group = new THREE.Group();
+  const panelMaterial = architecturePanelMat.clone();
+  panelMaterial.color.setHex(0x526d7d);
+  const frameMaterial = architectureRibMat.clone();
+  frameMaterial.color.setHex(0x9aabb5);
+  const accentMaterial = architectureWarningMat.clone();
+  box(group, 0, .09, 0, 3, .18, .78, frameMaterial);
+  box(group, 0, .68, 0, 2.72, .88, .28, panelMaterial);
+  box(group, 0, 1.17, 0, 2.9, .13, .48, frameMaterial);
+  box(group, 0, .67, -.159, 2.18, .42, .035, accentMaterial);
+  box(group, 0, .94, -.18, 2.55, .045, .045, frameMaterial);
+  box(group, 0, .4, -.18, 2.55, .045, .045, frameMaterial);
+  for (const side of [-1, 1]) {
+    const brace = box(group, side * 1.24, .64, 0, .22, .92, .54, frameMaterial);
+    brace.rotation.z = side * -.12;
+    box(group, side * 1.08, .06, 0, .48, .12, .9, frameMaterial);
+    const bolt = new THREE.Mesh(new THREE.CylinderGeometry(.055, .055, .05, 12), accentMaterial);
+    bolt.rotation.x = Math.PI / 2;
+    bolt.position.set(side * .92, .72, -.2);
+    group.add(bolt);
+  }
+  return { group, materials: [panelMaterial, frameMaterial], allMaterials: [panelMaterial, frameMaterial, accentMaterial] };
+}
+
+function createCoverHealthIndicator() {
+  const group = new THREE.Group();
+  group.position.set(0, 1.56, -.34);
+  const backMaterial = new THREE.MeshBasicMaterial({ color: 0x0a121a, transparent: true, opacity: .88, depthWrite: false });
+  const fillMaterial = new THREE.MeshBasicMaterial({ color: 0x54e6b4, depthWrite: false, toneMapped: false });
+  const back = new THREE.Mesh(new THREE.BoxGeometry(1.45, .075, .04), backMaterial);
+  const fill = new THREE.Mesh(new THREE.BoxGeometry(1.32, .045, .05), fillMaterial);
+  fill.position.set(0, 0, -.028);
+  group.add(back, fill);
+  group.visible = false;
+  return { group, fill, materials: [backMaterial, fillMaterial], hideAt: 0 };
+}
+
+function selectCoverPlacements() {
+  const placements = [], reserved = [];
+  const angles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5, Math.PI / 4, Math.PI * .75, Math.PI * 1.25, Math.PI * 1.75];
+  for (const radius of [11.5, 13.5]) {
+    for (const angle of angles) {
+      const rotation = Math.PI / 2 - angle;
+      const cosine = Math.abs(Math.cos(rotation)), sine = Math.abs(Math.sin(rotation));
+      const halfX = cosine * 1.5 + sine * .5975 + .04;
+      const halfZ = sine * 1.5 + cosine * .5975 + .04;
+      const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+      if (Math.hypot(x, z - 8) < 3.2) continue;
+      const candidate = { id: 'vtk-cover-' + (placements.length + 1), x, z, halfX, halfZ, centerY: .6783, halfY: .6783, material: 'composite' };
+      const overlaps = [...arenaColliders, ...reserved].some(other =>
+        Math.abs(candidate.x - other.x) < candidate.halfX + other.halfX + .65 &&
+        Math.abs(candidate.z - other.z) < candidate.halfZ + other.halfZ + .65
+      );
+      if (overlaps) continue;
+      placements.push({ collider: candidate, position: [x, 0, z], rotation });
+      reserved.push(candidate);
+      if (placements.length >= 4) return placements;
+    }
+  }
+  return placements;
+}
+
+function applyCoverVisualStage(runtime) {
+  const stage = runtime.state.stage;
+  const palette = {
+    intact: { color: 0x526d7d, emissive: 0x000000, intensity: 0 },
+    damaged: { color: 0x87674f, emissive: 0x351507, intensity: .28 },
+    critical: { color: 0x653b32, emissive: 0x791d0b, intensity: .72 },
+    destroyed: { color: 0x342b2a, emissive: 0x000000, intensity: 0 }
+  };
+  const look = palette[stage] || palette.intact;
+  for (const material of runtime.materials) {
+    if (material.color) material.color.setHex(look.color);
+    if (material.emissive) material.emissive.setHex(look.emissive);
+    if ('emissiveIntensity' in material) material.emissiveIntensity = look.intensity;
+  }
+  const health = runtime.healthBar;
+  health.fill.scale.x = Math.max(.001, runtime.state.ratio);
+  health.fill.position.x = -.66 * (1 - runtime.state.ratio);
+  health.group.visible = !runtime.state.destroyed && runtime.state.health < runtime.state.maxHealth;
+  health.hideAt = performance.now() + 2600;
+  health.fill.material.color.setHex(stage === 'critical' ? 0xff6c4c : stage === 'damaged' ? 0xffbd62 : 0x54e6b4);
+}
+
+const coverPlacements = selectCoverPlacements();
+for (const placement of coverPlacements) {
+  const state = createCoverState(placement.collider.id, 240);
+  const root = new THREE.Group();
+  root.position.set(...placement.position);
+  root.rotation.y = placement.rotation;
+  const fallback = createFallbackCoverVisual();
+  root.add(fallback.group);
+  const healthBar = createCoverHealthIndicator();
+  root.add(healthBar.group);
+  arena.add(root);
+  const collider = { ...placement.collider, cover: state };
+  arenaColliders.push(collider);
+  coverRuntime.set(state.id, {
+    state, collider, root, fallback: fallback.group,
+    materials: fallback.materials, fallbackMaterials: fallback.allMaterials,
+    healthBar, visualType: 'fallback'
+  });
+}
+
+let enemyNavigationGrid = createNavigationGrid(arenaColliders, { min: -22, max: 22, cellSize: 1.5, clearance: .86 });
+function rebuildEnemyNavigationGrid() {
+  enemyNavigationGrid = createNavigationGrid(arenaColliders, { min: -22, max: 22, cellSize: 1.5, clearance: .86 });
+  for (const enemy of enemies) {
+    const brain = enemy.userData.brain;
+    if (!brain) continue;
+    brain.path = [];
+    brain.pathIndex = 0;
+    brain.repathTimer = 0;
+  }
+}
+
 
 // Visual-only detail pass. All placements stay on the perimeter or existing pillars,
 // so the established player/enemy navigation and projectile collision layout is preserved.
@@ -648,6 +768,33 @@ async function loadVTKEnvironmentAssets() {
   const loaded = results.filter(result => result.status === 'fulfilled').length;
   for (const result of results) if (result.status === 'rejected') console.warn('[ARENA ZERO] Optional VTK prop skipped:', result.reason);
   console.info('[ARENA ZERO] VTK static props loaded:', loaded, '/', placements.length);
+
+  if (coverPlacements.length) {
+    try {
+      const geometry = await loadVTKGeometry('assets/vtk/cover_barricade.stl.gz');
+      for (const runtime of coverRuntime.values()) {
+        const material = architecturePanelMat.clone();
+        material.color.setHex(0x526d7d);
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.userData.assetPipeline = 'VTK';
+        mesh.userData.coverId = runtime.state.id;
+        runtime.root.add(mesh);
+        runtime.root.remove(runtime.fallback);
+        disposeObject3D(runtime.fallback, false);
+        for (const oldMaterial of runtime.fallbackMaterials) oldMaterial.dispose();
+        runtime.fallback = null;
+        runtime.materials = [material];
+        runtime.visualType = 'vtk';
+        runtime.visual = mesh;
+        applyCoverVisualStage(runtime);
+      }
+      console.info('[ARENA ZERO] Functional VTK cover barricades loaded:', coverRuntime.size);
+    } catch (error) {
+      console.warn('[ARENA ZERO] VTK cover unavailable; functional procedural cover remains active:', error);
+    }
+  }
 }
 loadVTKEnvironmentAssets().catch(error => console.warn('[ARENA ZERO] VTK asset pipeline unavailable; using procedural arena:', error));
 
@@ -1404,7 +1551,7 @@ function segmentObstacleHit(start, end) {
     }
     if (tMin <= tMax && tMin >= 0 && tMin < nearestT) {
       nearestT = tMin;
-      nearest = { point: start.clone().lerp(end, tMin), t: tMin };
+      nearest = { point: start.clone().lerp(end, tMin), t: tMin, obstacle };
     }
   }
   return nearest;
@@ -1470,6 +1617,27 @@ function addSurfaceImpact(position,normal,surface){
   scene.add(decal);effects.push({mesh:decal,life:.58,max:.58,kind:'impact'});
   if(surface==='metal')addShardBurst(position,color,4,.24);else addBurst(position,color,.075);
 }
+function damageCover(obstacle, amount, impactPoint) {
+  if (!obstacle?.cover) return false;
+  const result = applyCoverDamage(obstacle.cover, amount);
+  if (!result.applied) return false;
+  const runtime = coverRuntime.get(obstacle.cover.id);
+  if (runtime) applyCoverVisualStage(runtime);
+  if (result.destroyed) {
+    const index = arenaColliders.indexOf(obstacle);
+    if (index >= 0) arenaColliders.splice(index, 1);
+    if (runtime) {
+      runtime.root.visible = false;
+      runtime.healthBar.group.visible = false;
+    }
+    const burstPoint = impactPoint || new THREE.Vector3(obstacle.x, .8, obstacle.z);
+    addBurst(burstPoint, 0xff8a55, .42);
+    addShardBurst(burstPoint, 0xffad72, 14, .62);
+    rebuildEnemyNavigationGrid();
+    showToast('BARRICADE DESTROYED // ROUTES OPEN');
+  }
+  return result;
+}
 function shoot() {
   // Fire cadence is def.rate / runModifiers.fireRate and is enforced by the weapon state machine.
   // Player fire resolves synchronously against the nearest world obstruction or enemy zone.
@@ -1501,7 +1669,11 @@ function shoot() {
       const victim = hit.target.target;
       registerHit(endpoint, victim, def.damage * runModifiers.damage, hit);
       if(!enemies.includes(victim)){const removed=targets.indexOf(hit.target);if(removed>=0)targets.splice(removed,1);}
-    }else if(hit.kind==='obstacle')addSurfaceImpact(endpoint,hit.normal,hit.material);
+    }else if(hit.kind==='obstacle'){
+      const obstacle=arenaColliders.find(item=>item.id===hit.obstacleId);
+      if(obstacle?.cover)damageCover(obstacle,def.damage*runModifiers.damage,endpoint);
+      addSurfaceImpact(endpoint,hit.normal,hit.material);
+    }
   }
   $('hitmarker').classList.toggle('headshot',criticalHit);
   addMuzzleFlash(origin,baseDirection,def.color,currentWeapon);updateAmmoHUD();
@@ -1836,6 +2008,10 @@ $('resume-button').addEventListener('click', resumeGame);
 function tick(dt) {
   if (!started || gameOver || intermission || paused) return;
   animationClock += dt;
+  const coverNow = performance.now();
+  for (const runtime of coverRuntime.values()) {
+    if (runtime.healthBar.group.visible && coverNow > runtime.healthBar.hideAt) runtime.healthBar.group.visible = false;
+  }
   invuln = Math.max(0, invuln - dt);
   dashCooldown = Math.max(0, dashCooldown - dt);
   const weaponStep=stepWeaponSystem(weaponSystem,dt);
@@ -2072,7 +2248,8 @@ function tick(dt) {
 
     // A target hit wins only if it is closer along the segment than the cover.
     if (!hit && obstacleImpact) {
-      addBurst(obstacleImpact.point, 0x8ba6ba, .09);
+      if (obstacleImpact.obstacle?.cover) damageCover(obstacleImpact.obstacle, shot.damage, obstacleImpact.point);
+      addBurst(obstacleImpact.point, obstacleImpact.obstacle?.cover ? 0xffa66b : 0x8ba6ba, .09);
       hit = true;
     }
     if (hit || shot.life <= 0 || shot.mesh.position.length() > 55) {
