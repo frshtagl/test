@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A third-person PvE browser arena shooter built with Three.js. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. Visual Build 1.4 adds an opt-in render telemetry panel for frame cadence, draw calls, triangle count, geometry/texture counts and drawing-buffer resolution. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
+A first-person sci-fi PvE browser shooter built with Three.js. FPS Foundation 1.5 adds a camera-relative first-person controller with acceleration, stamina, jump, crouch, slide, ADS, recoil, viewmodel arms and a pause flow. The VTK static-asset pipeline generates and validates wall terminals, floor service hatches and a future tactical-cover module; static props load as compressed binary STL and receive shared Three.js materials. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. Visual Build 1.4 adds an opt-in render telemetry panel for frame cadence, draw calls, triangle count, geometry/texture counts and drawing-buffer resolution. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
 
 ## Run locally
 
@@ -18,24 +18,30 @@ Choose Low, Medium, High or Ultra on the deployment screen. The renderer applies
 
 The arena floor, industrial structures, player armor, weapons and enemy armor use locally generated color, normal and roughness maps. The maps are deterministic, mipmapped and anisotropically filtered where supported; no external texture downloads are required.
 
+## VTK asset pipeline
+
+Static environment props are generated offline with Python VTK and validated for bounds, triangle count and boundary/non-manifold edges. The browser loads compressed binary STL into Three.js and applies shared PBR materials. The cover barricade source is intentionally not used as gameplay cover until enemy navigation and a separate collision proxy are implemented. See docs/FPS_MASTER_PROMPT.md and docs/VTK_ASSET_PIPELINE.md.
+
 ## Graphics diagnostics
 
 For development testing, append `?debug=1` to the game URL or press **F3** to show/hide the diagnostics panel. It reports average FPS estimated from frame intervals, average and 95th-percentile frame intervals, draw calls, triangles, active geometry/texture counts, render scale and drawing-buffer resolution. These are browser-side indicators, not direct GPU-time measurements.
 
-## Controls
+## FPS controls
 
-- WASD: move
-- Mouse: look around (the Deploy button starts the run and requests pointer lock)
-- Left mouse: manual fire
-- F: toggle auto-fire
-- T: toggle aim assist
-- 1 / 2 / 3: switch weapon
+- WASD: move relative to camera direction
+- Mouse: look around; Deploy requests pointer lock
+- Left mouse: fire; right mouse: aim down sights
+- Shift: sprint (uses stamina)
+- Space: jump
+- Ctrl or C: crouch; press while sprinting to slide
+- Q: dash ability
 - R: reload
-- Shift: sprint
-- Space: dash
-- Esc: release the mouse
+- 1 / 2 / 3: switch weapons
+- Esc: pause/resume and release/reacquire the mouse
+- F: toggle optional auto-fire; T: toggle optional aim assist
+- F3: render diagnostics
 
-Aim assist and auto-fire target the PvE bots in this project only. Auto-fire can still be used with aim assist disabled; in that mode shots follow the centre-screen camera ray. Arena pillars and crates block player movement and projectiles, and the dash stops at cover.
+Aim assist and auto-fire are optional PvE accessibility assists and are off by default in the standard FPS profile. With both assists disabled, shots follow the centre-screen camera ray. Arena pillars and crates block player movement and projectiles.
 
 ## Weapons
 
@@ -83,6 +89,9 @@ After Pages is enabled, use Run workflow whenever you want to publish a new buil
 - .github/workflows/deploy.yml — manual GitHub Pages deployment
 - scripts/smoke-check.mjs — static integration checks
 - docs/ROADMAP.md — development milestones
+- docs/FPS_MASTER_PROMPT.md — complete FPS production specification and ordered development plan
+- docs/VTK_ASSET_PIPELINE.md — offline VTK geometry workflow and runtime integration
+- tools/vtk/generate_arena_assets.py — deterministic static-asset generator
 - docs/GRAPHICS_MASTER_PROMPT.md — detailed visual-upgrade protocol
 - docs/GRAPHICS_AUDIT.md — source audit and graphics milestone record
 

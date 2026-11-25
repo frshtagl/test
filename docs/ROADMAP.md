@@ -126,15 +126,54 @@
 - [x] Display effective render scale and drawing-buffer resolution
 - [ ] Capture baseline and per-quality-tier metrics on real devices
 
-## 1.5 — Animation and camera polish
-- [ ] Player weapon handling and reload animation refinement
-- [ ] Enemy attack and death animation refinement
-- [ ] Third-person camera collision and response review
+## 1.5 — FPS foundation
+- [x] First-person camera with configurable vertical FOV
+- [x] Camera-relative movement with acceleration, friction and air control
+- [x] Sprint stamina drain, regeneration delay and HUD indicator
+- [x] Jump, crouch and sprint-slide movement state machine
+- [x] Separate Q dash ability retained from the previous prototype
+- [x] First-person weapon viewmodel and simple armored forearms
+- [x] ADS input, weapon-specific FOV, subtle viewmodel sway and recoil impulse
+- [x] Manual fire and aim assist/auto-fire disabled by default
+- [x] Versioned settings migration, sensitivity and FOV controls
+- [x] Escape pause/resume flow and focus-loss handling
+- [ ] Browser visual review of arms/weapon alignment and movement feel
 
-## 1.6 — Performance and visual QA
+## 1.6 — VTK static environment asset pipeline
+- [x] Python VTK generator for wall terminal, floor service hatch and cover barricade
+- [x] Deterministic compressed binary STL export and asset manifest
+- [x] Mesh validation for empty geometry and boundary/non-manifold edges
+- [x] Browser STL parser with malformed-file guards
+- [x] Load wall terminals and floor hatches as visual-only arena props
+- [x] Keep tactical cover out of combat until navigation and a separate collider are ready
+- [ ] Inspect generated props in a browser screenshot and adjust scale/material balance
+- [ ] Add validated cover collision proxy with enemy navigation regression tests
+
+## 1.7 — Weapon handling and hit registration
+- [ ] Weapon state machine: ready, firing, ADS, reload and swap
+- [ ] Reload/swap viewmodel animation and ammo reserve model
+- [ ] Weapon-specific recoil recovery and spread behavior
+- [ ] Hitscan rifle/precision fire and deterministic shotgun pellet rays
+- [ ] Projectile profiles for energy weapons that need travel time
+- [ ] Cover-aware hit registration and impact feedback
+
+## 1.8 — Enemy AI and tactical navigation
+- [ ] Explicit enemy finite-state machines and attack telegraphs
+- [ ] Perception: field of view, line of sight and last-known player position
+- [ ] Local obstacle avoidance, stuck detection and recovery
+- [ ] Scout flanking, Gunner repositioning and Heavy weak-point behavior
+- [ ] Tactical cover selection after navigation tests pass
+
+## 1.9 — Audio, accessibility and encounter design
+- [ ] Spatial weapon/enemy audio and combat telegraphs
+- [ ] Pause/settings menu, reduced-motion option and control remapping
+- [ ] Additional arena layouts, hazards and deterministic wave composition
+
+## 2.0 — Performance and release QA
 - [ ] Before/after browser screenshots
-- [ ] Desktop and mobile visual review
-- [ ] FPS, frame-time and draw-call measurements
+- [ ] Desktop and compact viewport review
+- [ ] FPS and frame-time p50/p95 per graphics preset
+- [ ] Texture memory, draw calls, geometry and asset startup profiling
 - [ ] Final regression and performance pass
 
 ## Design principles

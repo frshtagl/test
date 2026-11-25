@@ -19,3 +19,7 @@ jobs:
         run: node --input-type=module --check < src/main.js
       - name: Run project smoke checks
         run: node scripts/smoke-check.mjs
+      - name: Test FPS movement controller
+        run: node scripts/fps-controller-test.mjs
+      - name: Validate generated VTK meshes
+        run: node scripts/vtk-asset-test.mjs

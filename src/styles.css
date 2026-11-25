@@ -534,3 +534,17 @@ button.upgrade-option:hover {
     padding: 10px 11px;
   }
 }
+
+/* FPS FOUNDATION 1.5 — stamina, ADS and accessible controller settings */
+.stamina-bar { margin-top: 7px; }
+.stamina-bar span { background: linear-gradient(90deg, #ff9b54, #ffd18a); box-shadow: 0 0 10px rgba(255,155,84,.55); }
+#game-shell.is-aiming .crosshair { width: 12px; height: 12px; gap: 4px; opacity: .42; }
+#game-shell.is-aiming .crosshair i { width: 3px; height: 3px; }
+.settings { max-height: calc(100vh - 132px); overflow-y: auto; scrollbar-width: thin; }
+.settings::-webkit-scrollbar { width: 4px; }
+.settings::-webkit-scrollbar-thumb { background: rgba(80,230,242,.3); }
+@media(max-width:620px) {
+  .settings { max-height: min(48vh, 360px); }
+  .controls-panel span:nth-child(n+3) { display: none; }
+  .stamina-bar { margin-top: 5px; }
+}

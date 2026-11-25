@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
@@ -9,7 +9,10 @@ const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit] 
   readFile('.github/workflows/deploy.yml', 'utf8'),
   readFile('docs/GRAPHICS_MASTER_PROMPT.md', 'utf8'),
   readFile('docs/ROADMAP.md', 'utf8'),
-  readFile('docs/GRAPHICS_AUDIT.md', 'utf8')
+  readFile('docs/GRAPHICS_AUDIT.md', 'utf8'),
+  readFile('docs/FPS_MASTER_PROMPT.md', 'utf8'),
+  readFile('docs/VTK_ASSET_PIPELINE.md', 'utf8'),
+  readFile('tools/vtk/generate_arena_assets.py', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -82,7 +85,7 @@ assert.match(roadmap, /## 0\.6 — Environment visual upgrade/);
 assert.match(roadmap, /## 0\.7 — Lighting and shadows/);
 assert.match(roadmap, /## 0\.8 — PBR materials and surface response/);
 assert.match(roadmap, /## 0\.9 — Character silhouette and armor detail/);
-assert.match(roadmap, /## 1\.6 — Performance and visual QA/);
+assert.match(roadmap, /## 2\.0 — Performance and release QA/);
 assert.ok(ids.includes('graphics-quality'), 'Graphics quality selector is missing');
 assert.ok(ids.includes('graphics-quality-note'), 'Graphics quality feedback is missing');
 assert.match(html, /<option value="low">LOW \/\/ PERFORMANCE<\/option>/);
@@ -96,7 +99,7 @@ assert.ok(js.includes('renderer.setPixelRatio(nextPixelRatio);'), 'Quality profi
 assert.ok(js.includes('renderer.setSize(width, height, false);'), 'Renderer must preserve CSS-controlled canvas sizing');
 assert.ok(js.includes('window.visualViewport?.addEventListener'), 'Visual viewport resize handling is missing');
 assert.ok(js.includes('new ResizeObserver(resizeRenderer)'), 'Container resize observation is missing');
-assert.ok(js.includes('graphicsQuality }'), 'Graphics quality is not persisted with settings');
+assert.ok(js.includes('graphicsQuality, mouseSensitivity, fieldOfView }'), 'Graphics quality and FPS preferences are not persisted with settings');
 assert.match(css, /\.graphics-quality-control/);
 assert.match(readme, /## Graphics quality/);
 assert.match(readme, /Visual Build 1\.2/);
@@ -118,7 +121,7 @@ assert.ok(js.includes('applySurfaceMaps(metal, industrialSurfaceMaps'), 'Weapon 
 assert.match(readme, /Visual Build 1\.3/);
 assert.match(readme, /## Procedural surface detail/);
 assert.ok(roadmap.includes('## 1.3 — Procedural textures and surface detail'));
-assert.ok(roadmap.includes('## 1.6 — Performance and visual QA'));
+assert.ok(roadmap.includes('## 2.0 — Performance and release QA'));
 assert.ok(ids.includes('graphics-debug'), 'Graphics diagnostics panel is missing');
 for (const id of ['debug-fps', 'debug-frame', 'debug-p95', 'debug-draw-calls', 'debug-triangles', 'debug-geometries', 'debug-textures', 'debug-scale', 'debug-buffer']) {
   assert.ok(ids.includes(id), 'Graphics diagnostic field is missing: ' + id);
@@ -133,12 +136,42 @@ assert.ok(js.includes('renderer.getDrawingBufferSize(graphicsBufferSize)'), 'Dra
 assert.match(readme, /## Graphics diagnostics/);
 assert.match(readme, /Visual Build 1\.4/);
 assert.ok(roadmap.includes('## 1.4 — Graphics diagnostics and profiling'));
-assert.ok(roadmap.includes('## 1.6 — Performance and visual QA'));
+assert.ok(roadmap.includes('## 2.0 — Performance and release QA'));
 assert.match(graphicsAudit, /Visual Build 1\.4 — Runtime graphics diagnostics/);
+assert.ok(ids.includes('stamina-text') && ids.includes('stamina-bar'), 'Stamina HUD is missing');
+assert.ok(ids.includes('look-sensitivity') && ids.includes('fov-range'), 'FPS look settings are missing');
+assert.ok(ids.includes('pause-screen') && ids.includes('resume-button'), 'Pause/resume UI is missing');
+assert.match(html, /FIRST-PERSON PvE/);
+assert.match(html, /<kbd>SPACE<\/kbd> JUMP/);
+assert.match(html, /<kbd>CTRL<\/kbd> CROUCH \/ SLIDE/);
+assert.match(html, /type="checkbox"><i><\/i>/);
+assert.ok(js.includes("import { parseBinarySTL } from './assets/binary-stl.mjs'"), 'VTK STL parser import is missing');
+assert.ok(js.includes("import { createFpsControllerState, resetFpsControllerState, stepFpsController } from './gameplay/fps-controller.mjs'"), 'FPS controller import is missing');
+assert.ok(js.includes('function loadVTKStaticMesh('), 'VTK runtime loader is missing');
+assert.ok(js.includes('const vtkGeometryCache = new Map()'), 'VTK geometry must be shared across prop instances');
+assert.ok(js.includes('loadVTKEnvironmentAssets()'), 'VTK props are not scheduled for loading');
+assert.ok(js.includes('stepFpsController(fpsMotion'), 'FPS movement state is not integrated');
+assert.ok(js.includes('camera.rotation.set('), 'First-person camera rotation is missing');
+assert.ok(js.includes('camera.fov = THREE.MathUtils.damp'), 'ADS/FOV interpolation is missing');
+assert.ok(js.includes('recoilPitch = Math.min'), 'Weapon recoil impulse is missing');
+assert.ok(js.includes("if (event.code === 'KeyQ'"), 'Dash must be separate from jump');
+assert.ok(js.includes("if (event.code === 'Space') jumpPressed = true"), 'Space jump input is missing');
+assert.ok(js.includes('function pauseGame()') && js.includes('function resumeGame()'), 'Pause/resume handlers are missing');
+assert.ok(js.includes('version: 2, aimAssist, autoFire, aimRange, graphicsQuality, mouseSensitivity, fieldOfView'), 'Versioned FPS settings are not persisted');
+assert.ok(js.includes('aimAssist = false, autoFire = false'), 'Standard FPS assists must default off');
+assert.match(readme, /## FPS controls/);
+assert.match(readme, /## VTK asset pipeline/);
+assert.match(fpsPrompt, /## FPS camera and input/);
+assert.match(fpsPrompt, /## VTK geometry pipeline/);
+assert.match(vtkDoc, /wall_terminal\.stl\.gz/);
+assert.match(vtkGenerator, /vtkFeatureEdges/);
+assert.ok(roadmap.includes('## 1.5 — FPS foundation'));
+assert.ok(roadmap.includes('## 1.6 — VTK static environment asset pipeline'));
 assert.match(graphicsAudit, /Visual Build 1\.3 — Procedural texture and surface detail/);
 assert.match(graphicsAudit, /No external image downloads/);
 assert.ok(js.includes('function buildPlayerLeg('));
-assert.ok(js.includes('playerParts.leftLeg.hip.rotation.x'));
+assert.ok(js.includes('playerRig.visible = false'));
+assert.ok(js.includes('function buildViewModelArm(side)'));
 assert.ok(js.includes('function buildEnemyLimb('));
 assert.ok(js.includes('function openUpgradeSelection()'), 'Wave-clear upgrade selection is missing');
 assert.ok(js.includes('function chooseUpgrade(index)'), 'Upgrade selection handler is missing');
@@ -148,7 +181,7 @@ assert.match(js, /def\.damage \* runModifiers\.damage/);
 assert.match(js, /def\.rate \/ runModifiers\.fireRate/);
 assert.match(js, /def\.reload \/ 1000 \/ runModifiers\.reloadSpeed/);
 assert.match(js, /runModifiers\.moveSpeed/);
-assert.match(js, /if \(!started \|\| gameOver \|\| intermission\) return;/);
+assert.match(js, /if \(!started \|\| gameOver \|\| intermission \|\| paused\) return;/);
 assert.match(js, /openUpgradeSelection\(\)/);
 assert.match(css, /\.upgrade-options/);
 assert.match(css, /button\.upgrade-option/);
