@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A third-person PvE browser arena shooter built with Three.js. Version 0.2 includes three weapons, three enemy archetypes, ranged enemy attacks, hit feedback and local persistence.
+A third-person PvE browser arena shooter built with Three.js. Visual Build 0.3 adds cinematic arena lighting, floor energy rings, ambient particles, illuminated wall trim, a scenic title-screen camera and a redesigned animated deployment menu. The combat build includes three weapons, three enemy archetypes, ranged enemy attacks, hit feedback and local persistence.
 
 ## Run locally
 
@@ -13,7 +13,7 @@ The project loads Three.js from a CDN, so an internet connection is required.
 ## Controls
 
 - WASD: move
-- Mouse: look around (click the game to capture the pointer)
+- Mouse: look around (the Deploy button starts the run and requests pointer lock)
 - Left mouse: manual fire
 - F: toggle auto-fire
 - T: toggle aim assist
