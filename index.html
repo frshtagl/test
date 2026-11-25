@@ -16,9 +16,9 @@
     <div class="vignette"></div>
     <div id="damage-flash" class="damage-flash"></div>
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // CHARACTER BUILD 0.4</small></div></div>
+      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // CHARACTER BUILD 0.5</small></div></div>
       <div class="wave-block"><small>SECTOR</small><strong id="wave">01</strong><span id="phase">STANDBY</span></div>
-      <div class="top-right"><span class="live-dot"></span> SYSTEM ONLINE</div>
+      <div class="top-right"><span class="live-dot"></span> SYSTEM ONLINE <span class="upgrade-counter">UPGRADES <b id="upgrade-count">00</b></span></div>
     </header>
     <section class="stats">
       <div class="stat"><small>ELIMINATIONS</small><strong id="kills">000</strong></div>
@@ -89,6 +89,15 @@
           <span class="start-cta__arrow" aria-hidden="true">↗</span>
         </button>
       </div>
+    </div>
+    <div id="upgrade-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="upgrade-title" aria-describedby="upgrade-round">
+      <section class="upgrade-card">
+        <div class="upgrade-eyebrow"><span class="live-dot"></span> SALVAGE SECURED // SYSTEM REWARD</div>
+        <h2 id="upgrade-title">CHOOSE YOUR <span>UPGRADE</span></h2>
+        <p id="upgrade-round" aria-live="polite">WAVE 01 CLEARED // SELECT ONE MODULE</p>
+        <div id="upgrade-options" class="upgrade-options" role="group" aria-label="Available upgrade modules"></div>
+        <small class="upgrade-hint">SELECT A MODULE TO CONTINUE · PRESS 1, 2 OR 3</small>
+      </section>
     </div>
     <div class="footer-note">ARENA ZERO <span>•</span> SURVIVE THE MACHINE</div>
   </main>

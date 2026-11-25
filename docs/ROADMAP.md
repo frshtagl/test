@@ -44,7 +44,9 @@
 
 ## 0.4 — World and progression
 - [ ] Additional arenas and environmental hazards
-- [ ] Upgrade choices between waves
+- [x] Upgrade choices between waves: choose one of three randomized modules after clearing a wave
+- [x] Stackable damage, fire-rate, reload, movement, health and magazine upgrades
+- [x] Upgrade intermission pauses combat and resumes through mouse or 1–3 keyboard selection
 - [ ] Character cosmetics and unlocks
 - [ ] Audio and accessibility settings
 - [ ] Local leaderboard and run history

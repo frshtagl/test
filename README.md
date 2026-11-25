@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A third-person PvE browser arena shooter built with Three.js. Character Build 0.4 adds an articulated sci-fi player with animated locomotion, detailed weapon silhouettes, and three visually distinct animated robot classes: Scout, Gunner and Heavy. It builds on the cinematic arena lighting, atmospheric particles, responsive deployment menu, three-weapon combat, enemy projectiles and local persistence.
+A third-person PvE browser arena shooter built with Three.js. Character Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices, stackable combat improvements, expanded magazines, reinforced health and mobility upgrades. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, cinematic arena lighting, three-weapon combat and local persistence.
 
 ## Run locally
 
@@ -34,6 +34,12 @@ Aim assist and auto-fire target the PvE bots in this project only. Auto-fire can
 | 3 | LONGSHOT | High-impact precision weapon |
 
 Switching weapons cancels the current reload but preserves each weapon's remaining magazine.
+
+## Wave upgrades
+
+After all hostiles in a wave are eliminated, the simulation pauses and presents three randomly selected upgrade modules. Choose one with the mouse or press **1**, **2** or **3** to continue.
+
+Available modules improve weapon damage, fire rate, reload speed, movement speed, maximum health or magazine capacity. Effects stack during the current run; a new deployment resets the upgrades. The HUD tracks how many modules have been collected.
 
 ## Enemy classes
 

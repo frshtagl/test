@@ -16,7 +16,7 @@ const referencedIds = [...new Set([...js.matchAll(/\$\(['"]([^'"]+)['"]\)/g)].ma
 const missingIds = referencedIds.filter(id => !ids.includes(id));
 assert.deepEqual(missingIds, [], 'Game code references missing HTML IDs');
 
-for (const id of ['game', 'start-button', 'restart-button', 'aim-toggle', 'fire-toggle', 'aim-range', 'weapon-name', 'weapon-desc', 'weapon-short', 'weapon-key-1', 'weapon-key-2', 'weapon-key-3', 'hitmarker', 'damage-flash', 'best-kills']) {
+for (const id of ['game', 'start-button', 'restart-button', 'aim-toggle', 'fire-toggle', 'aim-range', 'weapon-name', 'weapon-desc', 'weapon-short', 'weapon-key-1', 'weapon-key-2', 'weapon-key-3', 'hitmarker', 'damage-flash', 'best-kills', 'upgrade-screen', 'upgrade-round', 'upgrade-options', 'upgrade-count']) {
   assert.ok(ids.includes(id), 'Required HUD element is missing: ' + id);
 }
 
@@ -25,6 +25,8 @@ assert.match(html, /src=["']\.\/src\/main\.js["']/);
 assert.ok(html.includes('id="boot-error"'), 'Startup error feedback is missing');
 assert.ok(html.includes('<span id="weapon-short">RIFLE</span> <b id="reload-label">READY</b>'), 'Weapon label must not contain and erase the reload status element');
 assert.ok(html.includes('window.__ARENA_ZERO_REGISTER_START__'), 'Early start-button bootstrap is missing');
+assert.ok(html.includes('role="dialog" aria-modal="true"'), 'Upgrade selection must be an accessible modal');
+assert.ok(html.includes('id="upgrade-count"'), 'Upgrade counter is missing from the HUD');
 assert.ok(html.indexOf('window.__ARENA_ZERO_REGISTER_START__') < html.indexOf('src="./src/main.js"'), 'Start buttons must bind before the game module loads');
 assert.ok(js.includes('async function loadThreeModule()'), 'Three.js CDN fallback loader is missing');
 assert.ok(js.includes("https://unpkg.com/three@0.160.0/build/three.module.js"), 'Secondary Three.js CDN is missing');
@@ -37,6 +39,19 @@ assert.ok(js.includes('function buildPlayerArm('));
 assert.ok(js.includes('function buildPlayerLeg('));
 assert.ok(js.includes('playerParts.leftLeg.hip.rotation.x'));
 assert.ok(js.includes('function buildEnemyLimb('));
+assert.ok(js.includes('function openUpgradeSelection()'), 'Wave-clear upgrade selection is missing');
+assert.ok(js.includes('function chooseUpgrade(index)'), 'Upgrade selection handler is missing');
+assert.ok(js.includes('function magazineSize(id)'), 'Dynamic magazine sizing is missing');
+assert.ok(js.includes('available.slice(0, 3)'), 'Upgrade selection must offer three choices');
+assert.match(js, /def\.damage \* runModifiers\.damage/);
+assert.match(js, /def\.rate \/ runModifiers\.fireRate/);
+assert.match(js, /def\.reload \/ 1000 \/ runModifiers\.reloadSpeed/);
+assert.match(js, /runModifiers\.moveSpeed/);
+assert.match(js, /if \(!started \|\| gameOver \|\| intermission\) return;/);
+assert.match(js, /openUpgradeSelection\(\)/);
+assert.match(css, /\.upgrade-options/);
+assert.match(css, /button\.upgrade-option/);
+assert.match(readme, /## Wave upgrades/);
 assert.ok(js.includes('new THREE.OctahedronGeometry'));
 assert.ok(js.includes('new THREE.DodecahedronGeometry'));
 assert.ok(js.includes('new THREE.TorusGeometry'));
