@@ -45,6 +45,7 @@ grid.position.y = .012;
 scene.add(grid);
 const arena = new THREE.Group();
 scene.add(arena);
+const arenaColliders = [];
 
 function box(parent, x, y, z, sx, sy, sz, material) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material);
@@ -60,8 +61,11 @@ for (let i = -1; i <= 1; i += 2) {
 }
 for (let i = 0; i < 4; i++) {
   const a = i * Math.PI / 2;
-  box(arena, Math.cos(a) * 17, 2.8, Math.sin(a) * 17, 2, 5.6, 2, wallMat);
-  box(arena, Math.cos(a) * 17, 4.8, Math.sin(a) * 17, 2.1, .12, 2.1, cyanMat);
+  const x = Math.cos(a) * 17;
+  const z = Math.sin(a) * 17;
+  box(arena, x, 2.8, z, 2, 5.6, 2, wallMat);
+  box(arena, x, 4.8, z, 2.1, .12, 2.1, cyanMat);
+  arenaColliders.push({ x, z, halfX: 1, halfZ: 1, centerY: 2.8, halfY: 2.8 });
 }
 for (let i = 0; i < 12; i++) {
   const a = i * Math.PI / 6;
@@ -70,7 +74,39 @@ for (let i = 0; i < 12; i++) {
 for (let i = 0; i < 10; i++) {
   const x = (Math.random() - .5) * 34;
   const z = (Math.random() - .5) * 34;
-  if (Math.hypot(x, z) > 8) box(arena, x, .9, z, 2.2, 1.8, 2.2, wallMat);
+  if (Math.hypot(x, z) > 8) {
+    box(arena, x, .9, z, 2.2, 1.8, 2.2, wallMat);
+    arenaColliders.push({ x, z, halfX: 1.1, halfZ: 1.1, centerY: .9, halfY: .9 });
+  }
+}
+
+function resolveArenaCollisions(position, radius) {
+  for (let pass = 0; pass < 2; pass++) {
+    for (const obstacle of arenaColliders) {
+      const nearestX = THREE.MathUtils.clamp(position.x, obstacle.x - obstacle.halfX, obstacle.x + obstacle.halfX);
+      const nearestZ = THREE.MathUtils.clamp(position.z, obstacle.z - obstacle.halfZ, obstacle.z + obstacle.halfZ);
+      const dx = position.x - nearestX;
+      const dz = position.z - nearestZ;
+      const distanceSq = dx * dx + dz * dz;
+      if (distanceSq >= radius * radius) continue;
+
+      if (distanceSq < 1e-8) {
+        const exits = [
+          { distance: position.x - (obstacle.x - obstacle.halfX), axis: 'x', value: obstacle.x - obstacle.halfX - radius - .002 },
+          { distance: obstacle.x + obstacle.halfX - position.x, axis: 'x', value: obstacle.x + obstacle.halfX + radius + .002 },
+          { distance: position.z - (obstacle.z - obstacle.halfZ), axis: 'z', value: obstacle.z - obstacle.halfZ - radius - .002 },
+          { distance: obstacle.z + obstacle.halfZ - position.z, axis: 'z', value: obstacle.z + obstacle.halfZ + radius + .002 }
+        ];
+        exits.sort((a, b) => a.distance - b.distance);
+        position[exits[0].axis] = exits[0].value;
+      } else {
+        const distance = Math.sqrt(distanceSq);
+        const push = radius - distance + .002;
+        position.x += dx / distance * push;
+        position.z += dz / distance * push;
+      }
+    }
+  }
 }
 
 const player = new THREE.Group();
@@ -215,6 +251,9 @@ function makeEnemy() {
   const a = Math.random() * Math.PI * 2;
   const r = 17 + Math.random() * 5;
   enemy.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+  resolveArenaCollisions(enemy.position, cfg.radius * .55);
+  enemy.position.x = THREE.MathUtils.clamp(enemy.position.x, -22, 22);
+  enemy.position.z = THREE.MathUtils.clamp(enemy.position.z, -22, 22);
   enemy.userData = {
     type, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, damage: cfg.damage,
     range: cfg.range, cooldown: Math.random() * .7, attackRate: cfg.cooldown,
@@ -248,6 +287,41 @@ function closestPointOnSegment(point, start, end) {
   if (lengthSq === 0) return start.clone();
   const t = THREE.MathUtils.clamp(point.clone().sub(start).dot(segment) / lengthSq, 0, 1);
   return start.clone().addScaledVector(segment, t);
+}
+
+function segmentObstacleHit(start, end) {
+  let nearest = null;
+  let nearestT = Infinity;
+  for (const obstacle of arenaColliders) {
+    const bounds = [
+      ['x', obstacle.x - obstacle.halfX, obstacle.x + obstacle.halfX],
+      ['y', obstacle.centerY - obstacle.halfY, obstacle.centerY + obstacle.halfY],
+      ['z', obstacle.z - obstacle.halfZ, obstacle.z + obstacle.halfZ]
+    ];
+    let tMin = 0;
+    let tMax = 1;
+    for (const [axis, min, max] of bounds) {
+      const delta = end[axis] - start[axis];
+      if (Math.abs(delta) < 1e-8) {
+        if (start[axis] < min || start[axis] > max) {
+          tMin = Infinity;
+          break;
+        }
+        continue;
+      }
+      let t1 = (min - start[axis]) / delta;
+      let t2 = (max - start[axis]) / delta;
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      tMin = Math.max(tMin, t1);
+      tMax = Math.min(tMax, t2);
+      if (tMin > tMax) break;
+    }
+    if (tMin <= tMax && tMin >= 0 && tMin < nearestT) {
+      nearestT = tMin;
+      nearest = start.clone().lerp(end, tMin);
+    }
+  }
+  return nearest;
 }
 
 // Dispose geometries and (optionally) materials when transient objects are removed.
@@ -405,6 +479,7 @@ function start() {
   }
   effects.length = 0;
   player.position.set(0, 0, 8);
+  resolveArenaCollisions(player.position, .55);
   yaw = 0;
   pitch = -.13;
   currentWeapon = 'rifle';
@@ -443,6 +518,9 @@ addEventListener('keydown', event => {
   if (event.code === 'Space' && started && dashCooldown <= 0) {
     const direction = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
     player.position.addScaledVector(direction, 5);
+    resolveArenaCollisions(player.position, .55);
+    player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
+    player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
     dashCooldown = 2;
     invuln = .25;
     addBurst(player.position.clone().add(new THREE.Vector3(0, 1, 0)), 0x50e6f2, .35);
@@ -495,6 +573,9 @@ function tick(dt) {
   }
   player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
+  resolveArenaCollisions(player.position, .55);
+  player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
+  player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
   player.rotation.y = yaw;
 
   const cameraOffset = new THREE.Vector3(0, 4.1, 7.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
@@ -537,6 +618,9 @@ function tick(dt) {
       damage(data.damage);
       data.cooldown = data.attackRate;
     }
+    resolveArenaCollisions(enemy.position, data.radius * .55);
+    enemy.position.x = THREE.MathUtils.clamp(enemy.position.x, -22, 22);
+    enemy.position.z = THREE.MathUtils.clamp(enemy.position.z, -22, 22);
   }
 
   for (let i = shots.length - 1; i >= 0; i--) {
@@ -546,7 +630,11 @@ function tick(dt) {
     shot.mesh.position.copy(segmentEnd);
     shot.life -= dt;
     let hit = false;
-    if (!shot.hostile) {
+    const obstacleImpact = segmentObstacleHit(segmentStart, segmentEnd);
+    if (obstacleImpact) {
+      addBurst(obstacleImpact, 0x8ba6ba, .09);
+      hit = true;
+    } else if (!shot.hostile) {
       for (let j = enemies.length - 1; j >= 0; j--) {
         const enemy = enemies[j];
         const center = enemy.position.clone().add(new THREE.Vector3(0, 1.1 * enemy.scale.y, 0));
