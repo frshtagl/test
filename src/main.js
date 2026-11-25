@@ -918,13 +918,16 @@ function startWave() {
   updateHUD();
 }
 function projectile(from, direction, hostile, damageAmount, speed, color) {
+  const normalizedDirection = direction.clone().normalize();
+  const material = hostile ? orangeMat : (color === 'violet' ? violetMat : color === 'orange' ? orangeMat : cyanMat);
   const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(hostile ? .095 : .07, 8, 8),
-    hostile ? orangeMat : (color === 'violet' ? violetMat : color === 'orange' ? orangeMat : cyanMat)
+    new THREE.CapsuleGeometry(hostile ? .06 : .038, hostile ? .2 : .24, 4, 8),
+    material
   );
   mesh.position.copy(from);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalizedDirection);
   scene.add(mesh);
-  shots.push({ mesh, dir: direction.clone().normalize(), speed, life: 2.2, hostile, damage: damageAmount });
+  shots.push({ mesh, dir: normalizedDirection, speed, life: 2.2, hostile, damage: damageAmount });
 }
 
 // Return the nearest point on a movement segment. This prevents fast projectiles
@@ -1037,7 +1040,7 @@ function shoot() {
     direction.z += (Math.random() - .5) * def.spread;
     projectile(origin, direction, false, def.damage * runModifiers.damage, def.speed, currentWeapon === 'precision' ? 'violet' : currentWeapon === 'shotgun' ? 'orange' : 'cyan');
   }
-  addBurst(origin, def.color, .09);
+  addMuzzleFlash(origin, baseDirection, def.color, currentWeapon);
   updateAmmoHUD();
 }
 function reload() {
@@ -1067,12 +1070,53 @@ function damage(amount) {
 }
 function addBurst(position, color = 0x50e6f2, size = .2) {
   const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(size, 8, 8),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .9 })
+    new THREE.OctahedronGeometry(size, 0),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .9, depthWrite: false })
   );
   mesh.position.copy(position);
+  mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
   scene.add(mesh);
-  effects.push({ mesh, life: .22, max: .22 });
+  effects.push({ mesh, life: .22, max: .22, kind: 'burst' });
+}
+function addMuzzleFlash(position, direction, color, weaponId) {
+  const length = weaponId === 'precision' ? .62 : weaponId === 'shotgun' ? .48 : .38;
+  const radius = weaponId === 'shotgun' ? .15 : weaponId === 'precision' ? .075 : .105;
+  const mesh = new THREE.Mesh(
+    new THREE.ConeGeometry(radius, length, 8),
+    new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: .92,
+      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false
+    })
+  );
+  mesh.position.copy(position).addScaledVector(direction, length * .34);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+  scene.add(mesh);
+  effects.push({ mesh, life: .075, max: .075, kind: 'muzzle' });
+}
+function addShardBurst(position, color, count = 8, lifetime = .42) {
+  const positions = new Float32Array(count * 3);
+  const velocities = new Float32Array(count * 3);
+  for (let index = 0; index < count; index++) {
+    const direction = new THREE.Vector3(
+      (Math.random() - .5) * 2,
+      .35 + Math.random() * 1.3,
+      (Math.random() - .5) * 2
+    ).normalize();
+    const speed = 1.5 + Math.random() * 2.2;
+    velocities[index * 3] = direction.x * speed;
+    velocities[index * 3 + 1] = direction.y * speed;
+    velocities[index * 3 + 2] = direction.z * speed;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    color, size: .085, transparent: true, opacity: .95,
+    depthWrite: false, sizeAttenuation: true
+  });
+  const mesh = new THREE.Points(geometry, material);
+  mesh.position.copy(position);
+  scene.add(mesh);
+  effects.push({ mesh, life: lifetime, max: lifetime, velocities, kind: 'shards' });
 }
 function registerHit(position, enemy, damageAmount) {
   enemy.userData.hp = Math.max(0, enemy.userData.hp - damageAmount);
@@ -1089,7 +1133,9 @@ function registerHit(position, enemy, damageAmount) {
 function eliminateEnemy(enemy) {
   const index = enemies.indexOf(enemy);
   if (index < 0) return;
-  addBurst(enemy.position.clone().add(new THREE.Vector3(0, 1.1 * enemy.scale.y, 0)), 0xffa15a, .3);
+  const deathPoint = enemy.position.clone().add(new THREE.Vector3(0, 1.1 * enemy.scale.y, 0));
+  addBurst(deathPoint, 0xffa15a, .3);
+  addShardBurst(deathPoint, enemy.userData.type === 'gunner' ? 0xb99aff : 0xffa15a, 9, .46);
   scene.remove(enemy);
   enemies.splice(index, 1);
   disposeObject3D(enemy);
@@ -1413,7 +1459,18 @@ function tick(dt) {
   for (let i = effects.length - 1; i >= 0; i--) {
     const effect = effects[i];
     effect.life -= dt;
-    effect.mesh.scale.multiplyScalar(1 + dt * 7);
+    if (effect.kind === 'shards') {
+      const positions = effect.mesh.geometry.attributes.position;
+      for (let point = 0; point < effect.velocities.length; point += 3) {
+        positions.array[point] += effect.velocities[point] * dt;
+        positions.array[point + 1] += effect.velocities[point + 1] * dt;
+        positions.array[point + 2] += effect.velocities[point + 2] * dt;
+        effect.velocities[point + 1] -= 4.2 * dt;
+      }
+      positions.needsUpdate = true;
+    } else {
+      effect.mesh.scale.multiplyScalar(1 + dt * (effect.kind === 'muzzle' ? 9 : 7));
+    }
     effect.mesh.material.opacity = Math.max(0, effect.life / effect.max);
     if (effect.life <= 0) {
       scene.remove(effect.mesh);

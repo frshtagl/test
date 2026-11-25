@@ -92,9 +92,13 @@
 - [x] ARC rifle exposed energy cell
 
 ## 1.1 — Combat effects
-- [ ] Weapon-specific muzzle flashes, projectile trails and impact effects
-- [ ] Enemy defeat effects and environmental debris
-- [ ] Effect pooling and lifetime cleanup review
+- [x] Capsule-shaped directional projectiles
+- [x] Weapon-specific muzzle-flash cones
+- [x] Octahedral impact bursts
+- [x] Lightweight particle-shard burst on enemy elimination
+- [x] Effect lifetimes, attribute updates and disposal integrated into the existing effect loop
+- [ ] Projectile trails and environmental debris
+- [ ] Effect pooling review under sustained combat
 
 ## 1.2 — Animation and camera polish
 - [ ] Player weapon handling and reload animation refinement
