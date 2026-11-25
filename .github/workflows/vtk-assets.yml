@@ -1,0 +1,23 @@
+name: ARENA ZERO VTK asset regeneration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install VTK
+        run: python -m pip install -r tools/vtk/requirements.txt
+      - name: Regenerate static meshes
+        run: python tools/vtk/generate_arena_assets.py
+      - name: Validate mesh outputs
+        run: |
+          node scripts/vtk-asset-test.mjs
+          git diff --exit-code -- assets/vtk

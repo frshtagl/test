@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {createFpsControllerState,resetFpsControllerState,stepFpsController} from '../src/gameplay/fps-controller.mjs';
+const close=(a,b,t=.001)=>assert.ok(Math.abs(a-b)<=t,`${a} is not within ${t} of ${b}`);
+let s=createFpsControllerState(),r=stepFpsController(s,{yaw:0,moveForward:1},.05);
+assert.ok(r.dz<0,'Forward follows camera -Z at yaw zero.');
+s=createFpsControllerState();stepFpsController(s,{yaw:0,moveForward:1,moveX:1},.05);
+assert.ok(Math.hypot(s.velocityX,s.velocityZ)<=5.601,'Diagonal speed is normalized.');
+s=createFpsControllerState();r=stepFpsController(s,{yaw:0,moveForward:1,sprint:true},.05);
+assert.ok(r.sprinting&&s.stamina<100);const drained=s.stamina;
+for(let i=0;i<30;i++)stepFpsController(s,{yaw:0},.05);
+assert.ok(s.stamina>=drained,'Stamina regenerates after delay.');
+const walk=createFpsControllerState(),crouch=createFpsControllerState();
+for(let i=0;i<30;i++){stepFpsController(walk,{yaw:0,moveForward:1},.05);stepFpsController(crouch,{yaw:0,moveForward:1,crouch:true},.05);}
+assert.ok(Math.hypot(crouch.velocityX,crouch.velocityZ)<Math.hypot(walk.velocityX,walk.velocityZ));
+s=createFpsControllerState();for(let i=0;i<10;i++)stepFpsController(s,{yaw:0,moveForward:1,sprint:true},.05);
+r=stepFpsController(s,{yaw:0,moveForward:1,sprint:true,slidePressed:true},.05);assert.ok(r.sliding,'Sprint+crouch starts slide.');
+s=createFpsControllerState();r=stepFpsController(s,{yaw:0,jumpPressed:true},.05);assert.ok(r.height>0,'Jump raises player.');
+for(let i=0;i<100;i++)r=stepFpsController(s,{},.05);close(s.height,0);assert.ok(s.grounded,'Player lands.');
+s=createFpsControllerState();r=stepFpsController(s,{yaw:0,moveForward:1},5);assert.ok(r.dz>-.3,'Large delta is clamped.');
+s.stamina=3;s.height=4;s.velocityX=9;resetFpsControllerState(s);close(s.stamina,100);close(s.height,0);close(s.velocityX,0);
+console.log('ARENA ZERO FPS controller unit checks passed.');
