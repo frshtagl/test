@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A third-person PvE browser arena shooter built with Three.js. Visual Build 0.3 adds cinematic arena lighting, floor energy rings, ambient particles, illuminated wall trim, a scenic title-screen camera and a redesigned animated deployment menu. The combat build includes three weapons, three enemy archetypes, ranged enemy attacks, hit feedback and local persistence.
+A third-person PvE browser arena shooter built with Three.js. Character Build 0.4 adds an articulated sci-fi player with animated locomotion, detailed weapon silhouettes, and three visually distinct animated robot classes: Scout, Gunner and Heavy. It builds on the cinematic arena lighting, atmospheric particles, responsive deployment menu, three-weapon combat, enemy projectiles and local persistence.
 
 ## Run locally
 
