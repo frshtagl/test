@@ -15,7 +15,7 @@ Enemy decisions must be readable, fair and distinct. AI does not receive the pla
 Each enemy checks line of sight from its upper body to the player. It updates its last-known position only while the player is visible. When sight is lost, it navigates toward that last-known location rather than tracking the player through walls.
 
 - **Scout:** selects close destinations with a strong preference for a clear line of sight. When the player hides behind a barricade, the Scout's A* route goes around a barricade end before closing for melee.
-- **Gunner:** selects a medium-range orbit position with a clear firing angle. It moves around cover rather than firing into the obstruction.
+- **Gunner:** when sight is blocked by a barricade, evaluates cover-edge peek points on its own side, then moves around the edge to a clear medium-range firing angle instead of firing into the obstruction.
 - **Heavy:** advances toward close, visible attack positions and uses its area slam to pressure players who remain exposed.
 
 ## Barricade lifecycle
