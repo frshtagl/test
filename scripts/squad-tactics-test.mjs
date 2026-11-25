@@ -19,6 +19,9 @@ const separation=calculateSquadSeparation(self.position,[self,ally,otherSquad],l
 assert.ok(separation.x<0&&Math.abs(separation.z)<1e-9,'Ally separation should push away from a same-squad neighbour');
 assert.ok(separation.magnitude>0&&separation.magnitude<=1);
 assert.deepEqual(calculateSquadSeparation(self.position,[self,otherSquad],left.squadId,self),{x:0,z:0,magnitude:0});
+const coincidentSelf={position:{x:0,z:0},userData:{squadId:'overlap',squadSlot:0}};
+const coincidentAlly={position:{x:0,z:0},userData:{squadId:'overlap',squadSlot:1}};
+assert.ok(calculateSquadSeparation(coincidentSelf.position,[coincidentSelf,coincidentAlly],'overlap',coincidentSelf).magnitude>0,'Exact spawn overlap must be resolved deterministically');
 const source={squadId:'alpha',brain:{lastKnown:{x:0,z:0},lostSightTime:0,repathTimer:1}};
 const follower={squadId:'alpha',brain:{lastKnown:{x:8,z:8},lostSightTime:1,repathTimer:2}};
 const unrelated={squadId:'beta',brain:{lastKnown:{x:9,z:9},lostSightTime:2,repathTimer:3}};
