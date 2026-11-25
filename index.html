@@ -72,6 +72,7 @@
           <span class="start-cta__copy"><strong>DEPLOY INTO ARENA</strong><small>INITIALIZE NEW RUN // PvE</small></span>
           <span class="start-cta__arrow" aria-hidden="true">↗</span>
         </button>
+        <div id="boot-error" class="boot-error hidden" role="alert" aria-live="assertive"></div>
         <div class="start-card__footer">
           <span><i class="live-dot"></i> ALL SYSTEMS NOMINAL</span>
           <small>WASD MOVE · MOUSE LOOK · 1–3 SWITCH WEAPONS</small>
@@ -91,6 +92,63 @@
     </div>
     <div class="footer-note">ARENA ZERO <span>•</span> SURVIVE THE MACHINE</div>
   </main>
+  <script>
+    // Bind the deployment controls immediately, before the 3D module/CDN is ready.
+    (() => {
+      const startButton = document.getElementById('start-button');
+      const restartButton = document.getElementById('restart-button');
+      const errorBox = document.getElementById('boot-error');
+      let startAction = null;
+      let pendingStart = false;
+
+      function showBootError(error) {
+        const detail = error && error.message ? error.message : String(error || 'Unknown initialization error');
+        errorBox.textContent = 'SIMULATION FAILED TO INITIALIZE — ' + detail;
+        errorBox.classList.remove('hidden');
+        startButton.querySelector('strong').textContent = 'RELOAD GAME';
+        startButton.querySelector('small').textContent = 'RETRY INITIALIZATION';
+        startAction = () => window.location.reload();
+      }
+
+      function requestStart() {
+        if (!startAction) {
+          pendingStart = true;
+          startButton.querySelector('strong').textContent = 'LOADING SYSTEMS...';
+          startButton.querySelector('small').textContent = 'PLEASE WAIT // INITIALIZING';
+          return;
+        }
+        try {
+          const result = startAction();
+          if (result && typeof result.catch === 'function') result.catch(showBootError);
+        } catch (error) {
+          showBootError(error);
+        }
+      }
+
+      startButton.addEventListener('click', requestStart);
+      restartButton.addEventListener('click', requestStart);
+      window.__ARENA_ZERO_REGISTER_START__ = action => {
+        if (typeof action !== 'function') {
+          showBootError(new Error('Start controller was not registered.'));
+          return;
+        }
+        startAction = action;
+        startButton.querySelector('strong').textContent = 'DEPLOY INTO ARENA';
+        startButton.querySelector('small').textContent = 'INITIALIZE NEW RUN // PvE';
+        if (pendingStart) {
+          pendingStart = false;
+          requestStart();
+        }
+      };
+
+      window.addEventListener('error', event => {
+        if (!startAction && event.message) showBootError(event.message);
+      });
+      window.addEventListener('unhandledrejection', event => {
+        if (!startAction) showBootError(event.reason);
+      });
+    })();
+  </script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
