@@ -69,7 +69,7 @@ All classes use line-of-sight perception and last-known player position. They do
 
 ## Tactical AI
 
-Enemy navigation uses a deterministic A* grid built from arena collision boxes, including live tactical barricades. Scouts and Heavies prefer visible flank destinations around occupied cover; Gunners seek a clear firing angle. Destroying a barricade removes its collider, rebuilds navigation and invalidates existing paths. Scout strikes and Heavy slams have visible wind-up warnings; leaving the marked range cancels the attack. See docs/TACTICAL_AI.md and docs/VTK_ASSET_PIPELINE.md.
+Enemy navigation uses a deterministic A* grid built from arena collision boxes, including live tactical barricades. Scouts and Heavies prefer visible flank destinations around occupied cover; Gunners use cover-edge peek positions before taking a clear firing angle. Destroying a barricade removes its collider, rebuilds navigation and invalidates existing paths. Scout strikes and Heavy slams have visible wind-up warnings; leaving the marked range cancels the attack. See docs/TACTICAL_AI.md and docs/VTK_ASSET_PIPELINE.md.
 
 ## Persistence
 
