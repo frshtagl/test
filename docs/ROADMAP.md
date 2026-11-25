@@ -84,18 +84,24 @@
 - [x] Enemy upper/lower limb armor attached to existing animation pivots
 - [ ] Further silhouette and animation review in-browser
 
-## 1.0 — Weapons and combat effects
-- [ ] Weapon geometry and surface-detail pass
+## 1.0 — Weapon modelling and optics
+- [x] Shared receiver top rail and machined cooling slots
+- [x] Weapon-specific barrel bands
+- [x] Clear-coated precision-rifle scope lens
+- [x] Shotgun side-mounted shell cases
+- [x] ARC rifle exposed energy cell
+
+## 1.1 — Combat effects
 - [ ] Weapon-specific muzzle flashes, projectile trails and impact effects
 - [ ] Enemy defeat effects and environmental debris
 - [ ] Effect pooling and lifetime cleanup review
 
-## 1.1 — Animation and camera polish
+## 1.2 — Animation and camera polish
 - [ ] Player weapon handling and reload animation refinement
 - [ ] Enemy attack and death animation refinement
 - [ ] Third-person camera collision and response review
 
-## 1.2 — Performance and visual QA
+## 1.3 — Performance and visual QA
 - [ ] Before/after browser screenshots
 - [ ] Desktop and mobile visual review
 - [ ] FPS, frame-time and draw-call measurements

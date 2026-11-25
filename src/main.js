@@ -491,6 +491,24 @@ function buildWeaponVisual() {
   box(gunGroup, .35, 1.31, .205, .24, .12, .09, darkMetal);
   box(gunGroup, .35, 1.49, -.51, .09, .08, .26, glow);
 
+  // Shared top rail and six compact cooling slots give the receiver a machined profile.
+  box(gunGroup, .35, 1.58, -.5, .11, .035, .62, darkMetal);
+  for (const railZ of [-.72, -.56, -.4]) {
+    box(gunGroup, .35, 1.605, railZ, .17, .018, .045, metal);
+  }
+  const weaponCoolingVents = [];
+  for (const side of [-1, 1]) {
+    for (let slot = 0; slot < 3; slot++) {
+      weaponCoolingVents.push({
+        x: .35 + side * .14, y: 1.37, z: -.62 + slot * .13,
+        sx: .025, sy: .065, sz: .07
+      });
+    }
+  }
+  for (const vent of weaponCoolingVents) {
+    box(gunGroup, vent.x, vent.y, vent.z, vent.sx, vent.sy, vent.sz, darkMetal);
+  }
+
   const barrelLength = isPrecision ? .96 : isShotgun ? .62 : .72;
   const barrelZ = isPrecision ? -1.15 : isShotgun ? -.91 : -.98;
   const barrelXs = isShotgun ? [.285, .415] : [.35];
@@ -504,6 +522,9 @@ function buildWeaponVisual() {
     muzzleRing.rotation.y = Math.PI;
     muzzleRing.position.set(x, 1.36, barrelZ - barrelLength * .51);
     gunGroup.add(muzzleRing);
+    const barrelBand = new THREE.Mesh(new THREE.TorusGeometry(isPrecision ? .07 : .06, .012, 6, 14), darkMetal);
+    barrelBand.position.set(x, 1.36, barrelZ + barrelLength * .28);
+    gunGroup.add(barrelBand);
   }
   if (isPrecision) {
     box(gunGroup, .35, 1.57, -.52, .12, .13, .32, darkMetal);
@@ -512,14 +533,37 @@ function buildWeaponVisual() {
     scope.position.set(.35, 1.64, -.57);
     gunGroup.add(scope);
     box(gunGroup, .35, 1.65, -.57, .07, .055, .26, glow);
+    const scopeLensMat = new THREE.MeshPhysicalMaterial({
+      color: 0x347e9b,
+      metalness: .28,
+      roughness: .12,
+      clearcoat: .96,
+      clearcoatRoughness: .08,
+      emissive: 0x052538,
+      emissiveIntensity: .45
+    });
+    const scopeLens = new THREE.Mesh(new THREE.CylinderGeometry(.057, .057, .025, 16), scopeLensMat);
+    scopeLens.rotation.x = -Math.PI / 2;
+    scopeLens.position.set(.35, 1.64, -.75);
+    gunGroup.add(scopeLens);
     box(gunGroup, .35, 1.11, -.08, .22, .28, .18, darkMetal);
   } else if (isShotgun) {
     box(gunGroup, .35, 1.12, -.35, .25, .19, .34, metal);
     box(gunGroup, .35, 1.53, -.4, .08, .08, .22, glow);
+    // Three side-mounted shell cases make the close-range loadout immediately identifiable.
+    for (let shell = 0; shell < 3; shell++) {
+      const shellCase = new THREE.Mesh(new THREE.CylinderGeometry(.032, .032, .16, 8), orangeMat);
+      shellCase.rotation.x = -Math.PI / 2;
+      shellCase.position.set(.53, 1.27, -.5 + shell * .15);
+      shellCase.castShadow = true;
+      gunGroup.add(shellCase);
+    }
   } else {
     box(gunGroup, .35, 1.56, -.5, .09, .1, .3, darkMetal);
     box(gunGroup, .35, 1.6, -.53, .055, .035, .22, glow);
     box(gunGroup, .35, 1.13, -.44, .16, .27, .19, darkMetal);
+    // Exposed energy cell distinguishes the ARC rifle from the other two weapons.
+    box(gunGroup, .5, 1.34, -.48, .055, .16, .22, glow);
   }
   muzzle.position.set(.35, 1.36, barrelZ - barrelLength * .57);
   $('weapon-name').textContent = def.name;
