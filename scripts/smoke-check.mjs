@@ -23,7 +23,7 @@ for (const id of ['game', 'start-button', 'restart-button', 'aim-toggle', 'fire-
 assert.match(html, /href=["']\.\/src\/styles\.css["']/);
 assert.match(html, /src=["']\.\/src\/main\.js["']/);
 assert.ok(html.includes('id="boot-error"'), 'Startup error feedback is missing');
-assert.match(html, /<span id="weapon-short">RIFLE<\\/span>\\s*<b id="reload-label">READY<\\/b>/, 'Weapon label must not contain and erase the reload status element');
+assert.ok(html.includes('<span id="weapon-short">RIFLE</span> <b id="reload-label">READY</b>'), 'Weapon label must not contain and erase the reload status element');
 assert.ok(html.includes('window.__ARENA_ZERO_REGISTER_START__'), 'Early start-button bootstrap is missing');
 assert.ok(html.indexOf('window.__ARENA_ZERO_REGISTER_START__') < html.indexOf('src="./src/main.js"'), 'Start buttons must bind before the game module loads');
 assert.ok(js.includes('async function loadThreeModule()'), 'Three.js CDN fallback loader is missing');
