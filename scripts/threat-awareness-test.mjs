@@ -8,6 +8,7 @@ assert.equal(getThreatDirection(player,0,{x:0,z:5}).sector,'REAR');
 assert.equal(getThreatDirection(player,Math.PI/2,{x:-5,z:0}).sector,'FRONT');
 assert.equal(getThreatDirection(player,0,{x:0,z:0}),null);
 assert.equal(getThreatDirection(player,0,{x:NaN,z:0}),null);
+assert.equal(getThreatDirection(player,NaN,{x:0,z:-5}),null);
 const selected=selectPrimaryThreat(player,0,[
  {position:{x:0,z:-12},kind:'distant',severity:1},
  {position:{x:4,z:0},kind:'projectile',severity:2,timeToImpact:.25},
@@ -19,4 +20,5 @@ assert.ok(selected.timeToImpact<.3);
 assert.equal(selectPrimaryThreat(player,0,[{position:{x:0,z:-30},severity:10}],22),null);
 assert.equal(selectPrimaryThreat(player,0,[{position:{x:0,z:-2},severity:0}],22),null);
 assert.equal(selectPrimaryThreat(player,0,[],22),null);
+assert.equal(selectPrimaryThreat(player,NaN,[{position:{x:0,z:-2},severity:3}],22),null);
 console.log('ARENA ZERO threat-awareness checks passed: camera-relative sectors, urgency ranking and invalid-threat filtering.');
