@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createCoverState,applyCoverDamage} from '../src/gameplay/cover-system.mjs';
+import {createCoverState,applyCoverDamage,createCoverCollider} from '../src/gameplay/cover-system.mjs';
 const cover=createCoverState('barricade-a',180);
 assert.equal(cover.health,180);assert.equal(cover.ratio,1);assert.equal(cover.stage,'intact');
 let hit=applyCoverDamage(cover,30);
@@ -17,3 +17,12 @@ assert.equal(applyCoverDamage(cover,NaN).applied,false);
 assert.throws(()=>createCoverState('',100),/non-empty/);
 assert.throws(()=>createCoverState('invalid',0),/positive/);
 console.log('ARENA ZERO cover-system checks passed: health thresholds, damage clamping and one-time destruction.');
+
+const east=createCoverCollider('east',12,0,Math.PI/2);
+assert.ok(Math.abs(east.halfX-.6375)<1e-9);assert.ok(Math.abs(east.halfZ-1.54)<1e-9);
+const north=createCoverCollider('north',0,12,0);
+assert.ok(Math.abs(north.halfX-1.54)<1e-9);assert.ok(Math.abs(north.halfZ-.6375)<1e-9);
+const diagonal=createCoverCollider('diagonal',8,8,Math.PI/4);
+assert.ok(Math.abs(diagonal.halfX-diagonal.halfZ)<1e-9);
+assert.throws(()=>createCoverCollider('',0,0,0),/non-empty/);
+assert.throws(()=>createCoverCollider('bad',NaN,0,0),/finite/);
