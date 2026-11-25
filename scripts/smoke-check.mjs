@@ -133,7 +133,7 @@ assert.ok(js.includes('applySurfaceMaps(metal, industrialSurfaceMaps'), 'Weapon 
 assert.match(readme, /Visual Build 1\.3/);
 assert.match(readme, /## Procedural surface detail/);
 assert.ok(roadmap.includes('## 1.3 — Procedural textures and surface detail'));
-assert.ok(roadmap.includes('## 2.1 — Performance and release QA'));
+assert.ok(roadmap.includes('## 2.2 — Performance and release QA'));
 assert.ok(ids.includes('graphics-debug'), 'Graphics diagnostics panel is missing');
 for (const id of ['debug-fps', 'debug-frame', 'debug-p95', 'debug-draw-calls', 'debug-triangles', 'debug-geometries', 'debug-textures', 'debug-scale', 'debug-buffer']) {
   assert.ok(ids.includes(id), 'Graphics diagnostic field is missing: ' + id);
@@ -148,7 +148,7 @@ assert.ok(js.includes('renderer.getDrawingBufferSize(graphicsBufferSize)'), 'Dra
 assert.match(readme, /## Graphics diagnostics/);
 assert.match(readme, /Visual Build 1\.4/);
 assert.ok(roadmap.includes('## 1.4 — Graphics diagnostics and profiling'));
-assert.ok(roadmap.includes('## 2.1 — Performance and release QA'));
+assert.ok(roadmap.includes('## 2.2 — Performance and release QA'));
 assert.match(graphicsAudit, /Visual Build 1\.4 — Runtime graphics diagnostics/);
 assert.ok(ids.includes('stamina-text') && ids.includes('stamina-bar'), 'Stamina HUD is missing');
 assert.ok(ids.includes('look-sensitivity') && ids.includes('fov-range'), 'FPS look settings are missing');
