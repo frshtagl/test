@@ -281,3 +281,18 @@
   .overlay::after, .start-card { animation: none; }
   .start-cta, .start-cta::before, .start-cta__arrow { transition: none; }
 }
+
+
+/* STARTUP RECOVERY — keep deployment errors visible instead of leaving a dead title screen. */
+.boot-error {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 145, 96, .42);
+  border-radius: 7px;
+  color: #ffc09c;
+  background: rgba(91, 30, 22, .28);
+  font: 8px/1.7 Orbitron, sans-serif;
+  letter-spacing: .45px;
+  overflow-wrap: anywhere;
+}
+.boot-error.hidden { display: none; }
