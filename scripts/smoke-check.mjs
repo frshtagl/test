@@ -180,7 +180,7 @@ assert.match(js, /def\.damage \* runModifiers\.damage/);
 assert.match(js, /def\.rate \/ runModifiers\.fireRate/);
 assert.match(js, /def\.reload \/ 1000 \/ runModifiers\.reloadSpeed/);
 assert.match(js, /runModifiers\.moveSpeed/);
-assert.match(js, /if \(!started \|\| gameOver \|\| intermission\) return;/);
+assert.match(js, /if \(!started \|\| gameOver \|\| intermission \|\| paused\) return;/);
 assert.match(js, /openUpgradeSelection\(\)/);
 assert.match(css, /\.upgrade-options/);
 assert.match(css, /button\.upgrade-option/);
