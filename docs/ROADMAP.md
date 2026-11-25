@@ -23,6 +23,14 @@
 - [x] Elimination counter records one per enemy, not weighted enemy points
 - [ ] Manual playtest and balance pass across desktop/mobile
 
+## 0.25 — Visual polish
+- [x] Cinematic title-screen camera composition
+- [x] Premium animated Deploy and Redeploy buttons with keyboard focus states
+- [x] Darker high-contrast lighting, improved shadow coverage and atmospheric fog
+- [x] Emissive arena floor rings, segmented perimeter accents and illuminated wall trim
+- [x] Ambient floating particles and subtle animated lighting pulses
+- [ ] Manual visual/performance playtest on desktop and mobile
+
 ## 0.3 — World and progression
 - [ ] Additional arenas and environmental hazards
 - [ ] Upgrade choices between waves
