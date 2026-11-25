@@ -20,7 +20,7 @@ The arena floor, industrial structures, player armor, weapons and enemy armor us
 
 ## VTK asset pipeline
 
-Static environment props are generated offline with Python VTK and validated for bounds, triangle count and boundary/non-manifold edges. The browser loads compressed binary STL into Three.js and applies PBR materials. Up to four chest-high VTK barricades are placed around the arena centre with a procedural fallback and a separate rotated AABB proxy. The destructible tactical cover blocks movement, line of sight, hitscan and projectiles; it has health stages and can be destroyed to open routes. See docs/VTK_ASSET_PIPELINE.md.
+Static environment props are generated offline with Python VTK and validated for bounds, triangle count and boundary/non-manifold edges. The browser loads compressed binary STL into Three.js and applies PBR materials. Up to four chest-high VTK barricades are placed around the arena centre with a procedural fallback and a separate rotated AABB proxy. The destructible tactical cover blocks movement, line of sight, hitscan and projectiles; crouching lowers player exposure behind it, and it has health stages and can be destroyed to open routes. See docs/VTK_ASSET_PIPELINE.md.
 
 ## Graphics diagnostics
 
