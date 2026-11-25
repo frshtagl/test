@@ -29,6 +29,10 @@ jobs:
         run: node scripts/tactical-ai-test.mjs
       - name: Test destructible cover and collision proxies
         run: node scripts/cover-system-test.mjs
+      - name: Test coordinated enemy squad tactics
+        run: node scripts/squad-tactics-test.mjs
+      - name: Test directional threat awareness
+        run: node scripts/threat-awareness-test.mjs
       - name: Benchmark 22-enemy cover-aware pathfinding
         run: node scripts/tactical-ai-benchmark.mjs
       - name: Validate generated VTK meshes

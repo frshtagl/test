@@ -3,7 +3,9 @@ import { createFpsControllerState, resetFpsControllerState, stepFpsController } 
 import {createWeaponSystem,canFireWeapon,consumeWeaponRound,beginWeaponReload,cancelWeaponReload,requestWeaponSwap,stepWeaponSystem,setWeaponCapacity,resetWeaponSystem} from './gameplay/weapon-system.mjs';
 import {generatePelletDirections,resolveHitscan} from './gameplay/combat.mjs';
 import {createNavigationGrid,createTacticalBrain,stepTacticalBrain,updateTacticalPath} from './gameplay/tactical-ai.mjs';
-import {createCoverState,applyCoverDamage,createCoverCollider} from './gameplay/cover-system.mjs';
+import {createCoverState,applyCoverDamage,createCoverCollider,calculateCoverDamage} from './gameplay/cover-system.mjs';
+import {createSquadAssignment,calculateSquadSeparation,relaySquadContact} from './gameplay/squad-tactics.mjs';
+import {selectPrimaryThreat} from './gameplay/threat-awareness.mjs';
 
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
@@ -1129,7 +1131,8 @@ let dashCooldown = 0, invuln = 0, spawnTimer = 0, spawnCooldown = 0;
 let toastTimer = 0, hitTimer = 0, damageFlashTimer = 0, target = null;
 let spawnQueue = 0, animationClock = 0;
 const enemies = [], shots = [], effects = [];
-let enemySequence = 0;
+let enemySequence = 0, waveSpawnSequence = 0;
+let threatIndicatorTimer = 0;
 let intermission = false, upgradesTaken = 0, upgradeChoices = [];
 let maxHealth = 100;
 const runModifiers = { damage: 1, fireRate: 1, reloadSpeed: 1, moveSpeed: 1, magazine: 1 };
@@ -1160,6 +1163,7 @@ function renderUpgradeChoices() {
 }
 function openUpgradeSelection() {
   intermission = true;
+  clearThreatIndicator();
   document.exitPointerLock?.();
   const available = [...upgradePool];
   for (let i = available.length - 1; i > 0; i--) {
@@ -1458,7 +1462,12 @@ function makeEnemy() {
   enemy.position.x = THREE.MathUtils.clamp(enemy.position.x, -22, 22);
   enemy.position.z = THREE.MathUtils.clamp(enemy.position.z, -22, 22);
   const enemySeed = ++enemySequence;
+  const squad = createSquadAssignment(type, ++waveSpawnSequence, wave, 4);
   const brain = createTacticalBrain(type, { x: player.position.x, z: player.position.z }, enemySeed * 2654435761);
+  brain.squadRole = squad.role;
+  brain.squadId = squad.squadId;
+  brain.squadSlot = squad.slot;
+  brain.strafeSign = squad.strafeSign;
   const warningRadius = type === 'heavy' ? 3.65 : type === 'scout' ? 2.55 : .82;
   const telegraphMaterial = new THREE.MeshBasicMaterial({
     color: type === 'heavy' ? 0xff684e : type === 'scout' ? 0xffb15e : 0xb99aff,
@@ -1475,6 +1484,7 @@ function makeEnemy() {
   enemy.userData = {
     type, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, damage: cfg.damage,
     range: cfg.range, attackRate: cfg.cooldown, brain, attackTelegraph,
+    squadId: squad.squadId, squadRole: squad.role, squadSlot: squad.slot, contactBroadcastTimer: 0,
     radius: cfg.radius, points: cfg.points, barFill, rig, shell,
     legs: { left: leftLeg, right: rightLeg },
     arms: { left: leftArm, right: rightArm },
@@ -1487,6 +1497,7 @@ function makeEnemy() {
 }
 function startWave() {
   intermission = false;
+  waveSpawnSequence = 0;
   $('upgrade-screen').classList.add('hidden');
   spawnQueue = Math.min(5 + wave * 2, 22);
   spawnCooldown = .15;
@@ -1672,7 +1683,7 @@ function shoot() {
       if(!enemies.includes(victim)){const removed=targets.indexOf(hit.target);if(removed>=0)targets.splice(removed,1);}
     }else if(hit.kind==='obstacle'){
       const obstacle=arenaColliders.find(item=>item.id===hit.obstacleId);
-      if(obstacle?.cover)damageCover(obstacle,def.damage*runModifiers.damage,endpoint);
+      if(obstacle?.cover)damageCover(obstacle,calculateCoverDamage(currentWeapon,def.damage,runModifiers.damage),endpoint);
       addSurfaceImpact(endpoint,hit.normal,hit.material);
     }
   }
@@ -1683,6 +1694,56 @@ function shoot() {
 function reload() {
   if(beginWeaponReload(weaponSystem,currentWeapon,magazineSize(currentWeapon),runModifiers.reloadSpeed))updateAmmoHUD();
 }
+function clearThreatIndicator() {
+  threatIndicatorTimer = 0;
+  const indicator = $('threat-indicator');
+  indicator.classList.remove('active', 'critical');
+  indicator.removeAttribute('aria-label');
+}
+function updateThreatIndicator(dt) {
+  const threats = [];
+  for (const shot of shots) {
+    if (!shot.hostile) continue;
+    const toPlayer = player.position.clone().sub(shot.mesh.position);
+    const distance = toPlayer.length();
+    if (distance > 22 || shot.dir.dot(toPlayer) <= .15) continue;
+    threats.push({
+      position: shot.mesh.position, kind: 'projectile', severity: 2.2,
+      timeToImpact: distance / Math.max(shot.speed, 1)
+    });
+  }
+  for (const enemy of enemies) {
+    const data = enemy.userData, brain = data.brain;
+    if (brain.state !== 'windup' || !data.attackTelegraph.visible) continue;
+    const distance = enemy.position.distanceTo(player.position);
+    if (distance > 10) continue;
+    threats.push({
+      position: enemy.position,
+      kind: data.type === 'heavy' ? 'heavy slam' : data.type === 'scout' ? 'melee strike' : 'charged shot',
+      severity: data.type === 'heavy' ? 2.6 : data.type === 'scout' ? 2.1 : 1.8,
+      timeToImpact: brain.stateTime
+    });
+  }
+  const selected = selectPrimaryThreat(
+    { x: player.position.x, z: player.position.z }, yaw, threats, 22
+  );
+  const indicator = $('threat-indicator');
+  if (selected) {
+    threatIndicatorTimer = .2;
+    indicator.classList.add('active');
+    indicator.classList.toggle('critical', selected.timeToImpact !== null && selected.timeToImpact < .65);
+    $('threat-arrow').style.transform = 'rotate(' + selected.angleDegrees.toFixed(1) + 'deg)';
+    $('threat-label').textContent = selected.kind + ' // ' + selected.sector;
+    indicator.setAttribute('aria-label', 'Incoming ' + selected.kind.toLowerCase() + ' from ' + selected.sector.toLowerCase());
+  } else {
+    threatIndicatorTimer = Math.max(0, threatIndicatorTimer - dt);
+    if (threatIndicatorTimer <= 0) {
+      indicator.classList.remove('active', 'critical');
+      indicator.removeAttribute('aria-label');
+    }
+  }
+}
+
 function damage(amount) {
   if (invuln > 0 || gameOver) return;
   health = Math.max(0, health - amount);
@@ -1701,6 +1762,7 @@ function damage(amount) {
     $('final-kills').textContent = kills;
     $('final-wave').textContent = wave;
     $('end-screen').classList.remove('hidden');
+    clearThreatIndicator();
     updateHUD();
   }
 }
@@ -1827,6 +1889,9 @@ function start() {
   }
   enemies.length = 0;
   enemySequence = 0;
+  waveSpawnSequence = 0;
+  threatIndicatorTimer = 0;
+  clearThreatIndicator();
   for (const shot of shots) {
     scene.remove(shot.mesh);
     disposeObject3D(shot.mesh, false);
@@ -1987,6 +2052,7 @@ window.__ARENA_ZERO_REGISTER_START__?.(start);
 function pauseGame() {
   if (paused || !started || gameOver || intermission) return;
   paused = true;
+  clearThreatIndicator();
   keys = {};
   jumpPressed = false;
   slidePressed = false;
@@ -2084,6 +2150,7 @@ function tick(dt) {
 
   // Crouching lowers the exposed target point, allowing chest-high cover to break enemy sight and fire lanes.
   const playerExposureHeight = THREE.MathUtils.lerp(1.55, .82, motion.crouchBlend);
+  const squadMembers = enemies.map(member => member.userData);
   for (const enemy of enemies) {
     const data = enemy.userData;
     const brain = data.brain;
@@ -2099,8 +2166,14 @@ function tick(dt) {
       brain.lastKnown.x = player.position.x;
       brain.lastKnown.z = player.position.z;
       brain.lostSightTime = 0;
+      data.contactBroadcastTimer = Math.max(0, data.contactBroadcastTimer - dt);
+      if (data.contactBroadcastTimer <= 0) {
+        relaySquadContact(data, squadMembers, { x: player.position.x, z: player.position.z });
+        data.contactBroadcastTimer = .7;
+      }
     } else {
       brain.lostSightTime += dt;
+      data.contactBroadcastTimer = Math.max(0, data.contactBroadcastTimer - dt);
     }
 
     const attackDistance = data.type === 'heavy' ? 3.65 : data.type === 'scout' ? data.range + .7 : data.range + 2.5;
@@ -2124,7 +2197,7 @@ function tick(dt) {
     let waypoint = null;
     if (!busy) {
       waypoint = updateTacticalPath(
-        brain, enemy.position, brain.lastKnown, enemyNavigationGrid, arenaColliders, dt, data.type
+        brain, enemy.position, brain.lastKnown, enemyNavigationGrid, arenaColliders, dt, data.type, data.squadRole
       );
     }
     const moveDirection = new THREE.Vector3();
@@ -2133,6 +2206,10 @@ function tick(dt) {
       const remaining = moveDirection.length();
       if (remaining > .2) {
         moveDirection.multiplyScalar(1 / remaining);
+        const separation = calculateSquadSeparation(enemy.position, enemies, data.squadId, enemy, 2.35);
+        if (separation.magnitude > .015) {
+          moveDirection.add(new THREE.Vector3(separation.x, 0, separation.z).multiplyScalar(.78)).normalize();
+        }
         const speed = data.speed * (data.type === 'gunner' && hasLineOfSight && distance < 9 ? 1.12 : 1);
         enemy.position.addScaledVector(moveDirection, Math.min(speed * dt, remaining));
       } else {
@@ -2251,7 +2328,7 @@ function tick(dt) {
 
     // A target hit wins only if it is closer along the segment than the cover.
     if (!hit && obstacleImpact) {
-      if (obstacleImpact.obstacle?.cover) damageCover(obstacleImpact.obstacle, shot.damage, obstacleImpact.point);
+      if (obstacleImpact.obstacle?.cover) damageCover(obstacleImpact.obstacle, calculateCoverDamage('hostile', shot.damage), obstacleImpact.point);
       addBurst(obstacleImpact.point, obstacleImpact.obstacle?.cover ? 0xffa66b : 0x8ba6ba, .09);
       hit = true;
     }
@@ -2261,6 +2338,7 @@ function tick(dt) {
       shots.splice(i, 1);
     }
   }
+  updateThreatIndicator(dt);
   for (let i = effects.length - 1; i >= 0; i--) {
     const effect = effects[i];
     effect.life -= dt;

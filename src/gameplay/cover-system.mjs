@@ -31,3 +31,23 @@ export function createCoverCollider(id,x,z,rotation=0){
     centerY:.6783,halfY:.6783,material:'composite'
   };
 }
+
+
+const COVER_WEAPON_MULTIPLIERS=Object.freeze({
+  rifle:.75,
+  shotgun:.58,
+  precision:1.5,
+  hostile:1.05
+});
+export function calculateCoverDamage(weaponId,baseDamage,runModifier=1){
+  const damage=Number(baseDamage),modifier=Number(runModifier);
+  if(!Number.isFinite(damage)||damage<=0||!Number.isFinite(modifier)||modifier<=0)return 0;
+  const multiplier=COVER_WEAPON_MULTIPLIERS[weaponId];
+  if(!Number.isFinite(multiplier))return 0;
+  return damage*multiplier*modifier;
+}
+export function getCoverWeaponProfile(weaponId){
+  const multiplier=COVER_WEAPON_MULTIPLIERS[weaponId];
+  if(!Number.isFinite(multiplier))return null;
+  return{weaponId,multiplier,description:weaponId==='rifle'?'Sustained fire':weaponId==='shotgun'?'Pellet spread':'High-impact penetration'};
+}

@@ -18,6 +18,14 @@ assert.ok(flankPath.some(point=>Math.abs(point.z)>6.3),'Scout must route around 
 const gunnerFlank=chooseTacticalGoal({type:'gunner',position:flankEnemy,target:flankTarget,grid:flankGrid,obstacles:flankWall});
 assert.ok(hasLineOfSight2D(gunnerFlank,flankTarget,flankWall,.06),'Gunner must seek a clear firing angle');
 assert.ok(gunnerFlank.x>0&&Math.abs(gunnerFlank.z)>6.4,'Gunner should peek around a cover edge while staying on its side of the barricade');
+const formationGrid=createNavigationGrid([],{min:-20,max:20,cellSize:1});
+const formationTarget={x:0,z:0},formationPosition={x:0,z:16};
+const flankLeft=chooseTacticalGoal({type:'scout',position:formationPosition,target:formationTarget,grid:formationGrid,obstacles:[],squadRole:'flank-left'});
+const flankRight=chooseTacticalGoal({type:'scout',position:formationPosition,target:formationTarget,grid:formationGrid,obstacles:[],squadRole:'flank-right'});
+assert.ok(flankLeft.x>0&&flankRight.x<0,'Squad Scouts must select opposite flank sectors');
+const supportLeft=chooseTacticalGoal({type:'gunner',position:formationPosition,target:formationTarget,grid:formationGrid,obstacles:[],squadRole:'support-left'});
+const supportRight=chooseTacticalGoal({type:'gunner',position:formationPosition,target:formationTarget,grid:formationGrid,obstacles:[],squadRole:'support-right'});
+assert.ok(supportLeft.x>0&&supportRight.x<0,'Squad Gunners must select separated support sectors');
 const open=createNavigationGrid([],{min:-20,max:20,cellSize:1});
 const target={x:0,z:0},enemy={x:0,z:16};
 const radii=['scout','heavy','gunner'].map(type=>{const p=chooseTacticalGoal({type,position:enemy,target,grid:open,obstacles:[]});return Math.hypot(p.x,p.z);});

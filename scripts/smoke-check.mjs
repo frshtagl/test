@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator, weaponModule, combatModule, combatDoc, coverModule, coverTest, tacticalModule, tacticalTest, vtkManifest] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator, weaponModule, combatModule, combatDoc, coverModule, coverTest, tacticalModule, tacticalTest, vtkManifest, squadModule, squadTest, threatModule, threatTest] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
@@ -20,7 +20,11 @@ const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, 
   readFile('scripts/cover-system-test.mjs', 'utf8'),
   readFile('src/gameplay/tactical-ai.mjs', 'utf8'),
   readFile('scripts/tactical-ai-test.mjs', 'utf8'),
-  readFile('assets/vtk/manifest.json', 'utf8')
+  readFile('assets/vtk/manifest.json', 'utf8'),
+  readFile('src/gameplay/squad-tactics.mjs', 'utf8'),
+  readFile('scripts/squad-tactics-test.mjs', 'utf8'),
+  readFile('src/gameplay/threat-awareness.mjs', 'utf8'),
+  readFile('scripts/threat-awareness-test.mjs', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -93,7 +97,7 @@ assert.match(roadmap, /## 0\.6 — Environment visual upgrade/);
 assert.match(roadmap, /## 0\.7 — Lighting and shadows/);
 assert.match(roadmap, /## 0\.8 — PBR materials and surface response/);
 assert.match(roadmap, /## 0\.9 — Character silhouette and armor detail/);
-assert.match(roadmap, /## 2\.1 — Performance and release QA/);
+assert.match(roadmap, /## 2\.2 — Performance and release QA/);
 assert.ok(ids.includes('graphics-quality'), 'Graphics quality selector is missing');
 assert.ok(ids.includes('graphics-quality-note'), 'Graphics quality feedback is missing');
 assert.match(html, /<option value="low">LOW \/\/ PERFORMANCE<\/option>/);
@@ -129,7 +133,7 @@ assert.ok(js.includes('applySurfaceMaps(metal, industrialSurfaceMaps'), 'Weapon 
 assert.match(readme, /Visual Build 1\.3/);
 assert.match(readme, /## Procedural surface detail/);
 assert.ok(roadmap.includes('## 1.3 — Procedural textures and surface detail'));
-assert.ok(roadmap.includes('## 2.1 — Performance and release QA'));
+assert.ok(roadmap.includes('## 2.2 — Performance and release QA'));
 assert.ok(ids.includes('graphics-debug'), 'Graphics diagnostics panel is missing');
 for (const id of ['debug-fps', 'debug-frame', 'debug-p95', 'debug-draw-calls', 'debug-triangles', 'debug-geometries', 'debug-textures', 'debug-scale', 'debug-buffer']) {
   assert.ok(ids.includes(id), 'Graphics diagnostic field is missing: ' + id);
@@ -144,7 +148,7 @@ assert.ok(js.includes('renderer.getDrawingBufferSize(graphicsBufferSize)'), 'Dra
 assert.match(readme, /## Graphics diagnostics/);
 assert.match(readme, /Visual Build 1\.4/);
 assert.ok(roadmap.includes('## 1.4 — Graphics diagnostics and profiling'));
-assert.ok(roadmap.includes('## 2.1 — Performance and release QA'));
+assert.ok(roadmap.includes('## 2.2 — Performance and release QA'));
 assert.match(graphicsAudit, /Visual Build 1\.4 — Runtime graphics diagnostics/);
 assert.ok(ids.includes('stamina-text') && ids.includes('stamina-bar'), 'Stamina HUD is missing');
 assert.ok(ids.includes('look-sensitivity') && ids.includes('fov-range'), 'FPS look settings are missing');
@@ -261,5 +265,25 @@ assert.ok(tacticalTest.includes('Gunner should peek around a cover edge'), 'Gunn
 assert.match(vtkManifest, /"collision_proxy_in_game": true/);
 assert.match(vtkDoc, /procedural fallback remains active/);
 assert.ok(readme.includes('destructible tactical cover'), 'README must describe functional cover');
+assert.ok(coverModule.includes('export function calculateCoverDamage'), 'Weapon-specific cover damage profiles are missing');
+assert.ok(coverTest.includes("calculateCoverDamage('precision',105)"), 'Precision weapon cover damage regression is missing');
+assert.ok(js.includes('calculateCoverDamage(currentWeapon,def.damage,runModifiers.damage)'), 'Player weapon-specific cover damage is not integrated');
+assert.ok(js.includes("calculateCoverDamage('hostile', shot.damage)"), 'Hostile projectile cover damage is not integrated');
+assert.ok(js.includes("from './gameplay/squad-tactics.mjs'"), 'Squad tactics module import is missing');
+assert.ok(js.includes('createSquadAssignment(type, ++waveSpawnSequence, wave, 4)'), 'Wave squad assignment is missing');
+assert.ok(js.includes('relaySquadContact(data, squadMembers'), 'Squad contact relay is missing');
+assert.ok(js.includes('calculateSquadSeparation(enemy.position, enemies, data.squadId'), 'Squad separation is missing');
+assert.ok(tacticalModule.includes('squadRoleAngle'), 'Squad roles must influence tactical navigation');
+assert.ok(squadModule.includes('export function relaySquadContact'), 'Squad contact relay helper is missing');
+assert.ok(squadTest.includes('shared contact memory'), 'Squad contact regression tests are missing');
+assert.ok(js.includes("from './gameplay/threat-awareness.mjs'"), 'Threat awareness module import is missing');
+assert.ok(js.includes('function updateThreatIndicator(dt)'), 'Directional threat HUD updater is missing');
+assert.ok(js.includes('function clearThreatIndicator()'), 'Threat warnings must clear when combat pauses');
+assert.ok(js.includes('clearThreatIndicator();'), 'Threat warning reset integration is missing');
+assert.ok(js.includes("$('threat-arrow').style.transform"), 'Threat arrow must rotate toward incoming attacks');
+assert.ok(ids.includes('threat-indicator') && ids.includes('threat-arrow') && ids.includes('threat-label'), 'Threat HUD elements are missing');
+assert.ok(css.includes('.threat-indicator.critical'), 'Threat urgency styling is missing');
+assert.ok(threatModule.includes('export function selectPrimaryThreat'), 'Threat prioritization helper is missing');
+assert.ok(threatTest.includes('camera-relative sectors'), 'Threat direction regression tests are missing');
 
-console.log('ARENA ZERO smoke checks passed: ' + ids.length + ' unique HTML IDs, ' + referencedIds.length + ' DOM references, combat, tactical AI and destructible-cover integration validated.');
+console.log('ARENA ZERO smoke checks passed: ' + ids.length + ' unique HTML IDs, ' + referencedIds.length + ' DOM references, combat, cover, squad coordination and threat HUD validated.');

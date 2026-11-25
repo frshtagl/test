@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A first-person sci-fi PvE browser shooter built with Three.js. FPS Foundation 1.5 adds a camera-relative first-person controller with acceleration, stamina, jump, crouch, slide, ADS, recoil, viewmodel arms and a pause flow. The VTK static-asset pipeline generates wall terminals, floor service hatches and functional tactical barricades. Barricades use conservative collision proxies for movement, navigation and projectile occlusion, and remain playable through a procedural fallback if STL loading fails. Player and enemy fire can damage and destroy cover, opening new routes. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. Visual Build 1.4 adds an opt-in render telemetry panel for frame cadence, draw calls, triangle count, geometry/texture counts and drawing-buffer resolution. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
+A first-person sci-fi PvE browser shooter built with Three.js. FPS Foundation 1.5 adds a camera-relative first-person controller with acceleration, stamina, jump, crouch, slide, ADS, recoil, viewmodel arms and a pause flow. The VTK static-asset pipeline generates wall terminals, floor service hatches and functional tactical barricades. Barricades use conservative collision proxies for movement, navigation and projectile occlusion, and remain playable through a procedural fallback if STL loading fails. Player and enemy fire can damage and destroy cover, opening new routes. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. Visual Build 1.4 adds an opt-in render telemetry panel for frame cadence, draw calls, triangle count, geometry/texture counts and drawing-buffer resolution. Combat Intelligence 2.1 adds coordinated four-member enemy squads, shared target contact, ally spacing, weapon-specific barricade damage and camera-relative incoming-threat warnings. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
 
 ## Run locally
 
@@ -71,6 +71,26 @@ All classes use line-of-sight perception and last-known player position. They do
 
 Enemy navigation uses a deterministic A* grid built from arena collision boxes, including live tactical barricades. Scouts and Heavies prefer visible flank destinations around occupied cover; Gunners use cover-edge peek positions before taking a clear firing angle. Destroying a barricade removes its collider, rebuilds navigation and invalidates existing paths. Scout strikes and Heavy slams have visible wind-up warnings; leaving the marked range cancels the attack. See docs/TACTICAL_AI.md and docs/VTK_ASSET_PIPELINE.md.
 
+## Combat intelligence 2.1
+
+### Weapon-specific environmental damage
+Barricades have 180 health. Each hitscan pellet applies its weapon profile independently, so every shotgun pellet that intersects the same barricade contributes damage.
+
+| Weapon | Cover multiplier | Example per hit |
+|---|---:|---:|
+| ARC Rifle | 0.75x | 21.75 from 29 base damage |
+| BREACH-7 | 0.58x per pellet | 7.54 from 13 base damage |
+| LONGSHOT | 1.50x | 157.5 from 105 base damage |
+| Hostile projectile | 1.05x | 8.4 from 8 base damage |
+
+Run damage upgrades also affect player weapon damage to cover. The profile is deliberately separate from enemy hit-zone multipliers.
+
+### Coordinated squads
+Each wave groups spawns into squads of up to four. Scouts receive alternating left/right flank roles, Gunners alternate support lanes, and Heavies act as anchors. Squad members relay newly observed player positions to teammates, causing stale routes to be replanned. A light separation steering term reduces same-squad crowding without replacing A* navigation or arena collision.
+
+### Directional threat HUD
+An arrow above the crosshair points toward the highest-priority approaching projectile or active enemy wind-up. Direction is calculated relative to the current camera yaw, not the world axes. Imminent attacks use a pulsing red warning; lower-urgency threats use amber. The indicator is hidden when no relevant threat is approaching.
+
 ## Persistence
 
 Best elimination score and combat-assist settings are stored in browser local storage on the current device.
@@ -93,13 +113,18 @@ After Pages is enabled, use Run workflow whenever you want to publish a new buil
 - src/gameplay/weapon-system.mjs — deterministic weapon state machine
 - src/gameplay/combat.mjs — renderer-independent ballistics and obstruction resolution
 - src/gameplay/tactical-ai.mjs — deterministic A* navigation and enemy attack state machine
-- src/gameplay/cover-system.mjs — barricade collision bounds and destructible health state machine
+- src/gameplay/cover-system.mjs — barricade collision bounds, health and weapon damage profiles
+- src/gameplay/squad-tactics.mjs — squad roles, ally spacing and shared contact memory
+- src/gameplay/threat-awareness.mjs — camera-relative threat direction and urgency selection
 - scripts/combat-test.mjs — deterministic spread and hitscan regression tests
 - scripts/tactical-ai-test.mjs — navigation, archetype spacing, cover flanking and attack regression tests
-- scripts/cover-system-test.mjs — rotated collision proxy and destructible-cover regression tests
+- scripts/cover-system-test.mjs — rotated collision proxy, destruction and weapon-specific damage regression tests
+- scripts/squad-tactics-test.mjs — squad role, spacing and contact relay tests
+- scripts/threat-awareness-test.mjs — camera-relative threat and urgency tests
 - scripts/tactical-ai-benchmark.mjs — 22-enemy cover-aware pathfinding stress benchmark
 - docs/COMBAT_SYSTEM.md — combat architecture and weapon tuning specification
 - docs/TACTICAL_AI.md — enemy perception, navigation and attack design
+- docs/COMBAT_INTELLIGENCE.md — weapon-to-cover balance, squad coordination and threat HUD design
 - src/styles.css — interface and responsive styling
 - .github/workflows/quality.yml — syntax and integration checks on every push
 - .github/workflows/deploy.yml — manual GitHub Pages deployment

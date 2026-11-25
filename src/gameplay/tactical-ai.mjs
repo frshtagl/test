@@ -100,10 +100,18 @@ export function findNavigationPath(grid,start,goal){
   }
   return smooth;
 }
-function ringGoal({type,position,target,grid,obstacles,strafeSign}){
-  const dx=position.x-target.x,dz=position.z-target.z,currentAngle=Math.atan2(dz,dx),currentDistance=Math.hypot(dx,dz);
+function squadRoleAngle(role){
+  if(role==='flank-left'||role==='support-left')return role==='flank-left'?-1.05:-.42;
+  if(role==='flank-right'||role==='support-right')return role==='flank-right'?1.05:.42;
+  if(role==='anchor')return 0;
+  return null;
+}
+function ringGoal({type,position,target,grid,obstacles,strafeSign,squadRole}){
+  const dx=position.x-target.x,dz=position.z-target.z,currentAngle=Math.atan2(dz,dx);
   const radius=type==='scout'?2.25:type==='heavy'?3.05:12.4;
-  const preferred=currentAngle+(type==='scout'?strafeSign*.95:type==='gunner'?strafeSign*.38:0);
+  const roleOffset=squadRoleAngle(squadRole);
+  const roleBias=roleOffset===null?(type==='scout'?strafeSign*.95:type==='gunner'?strafeSign*.38:0):roleOffset+strafeSign*(type==='scout'?.16:type==='gunner'?.12:.06);
+  const preferred=currentAngle+roleBias;
   let best=null,bestScore=Infinity;
   const samples=type==='gunner'?24:16;
   for(let i=0;i<samples;i++){
@@ -117,8 +125,10 @@ function ringGoal({type,position,target,grid,obstacles,strafeSign}){
   if(best)return best;
   return{x:clamp(target.x+Math.cos(currentAngle)*radius,grid.min,grid.max),z:clamp(target.z+Math.sin(currentAngle)*radius,grid.min,grid.max)};
 }
-function chooseGunnerPeekGoal(position,target,grid,obstacles){
+function chooseGunnerPeekGoal(position,target,grid,obstacles,squadRole,strafeSign){
   if(hasLineOfSight2D(position,target,obstacles,.06))return null;
+  const roleOffset=squadRoleAngle(squadRole);
+  const preferredAngle=Math.atan2(position.z-target.z,position.x-target.x)+(roleOffset===null?strafeSign*.38:roleOffset+strafeSign*.12);
   let best=null,bestScore=Infinity;
   for(const obstacle of obstacles){
     if(!obstacle.cover)continue;
@@ -136,19 +146,20 @@ function chooseGunnerPeekGoal(position,target,grid,obstacles){
         if(!hasLineOfSight2D(candidate,target,obstacles,.06))continue;
         const targetDistance=distance(candidate,target);
         if(targetDistance<7||targetDistance>16)continue;
-        const score=distance(position,candidate)+Math.abs(targetDistance-12.4)*1.3+margin*.12;
+        const candidateAngle=Math.atan2(candidate.z-target.z,candidate.x-target.x);
+        const score=distance(position,candidate)+Math.abs(targetDistance-12.4)*1.3+margin*.12+angleDelta(candidateAngle,preferredAngle)*1.1;
         if(score<bestScore){bestScore=score;best=candidate;}
       }
     }
   }
   return best;
 }
-export function chooseTacticalGoal({type,position,target,grid,obstacles=grid.obstacles,strafeSign=1}){
+export function chooseTacticalGoal({type,position,target,grid,obstacles=grid.obstacles,strafeSign=1,squadRole=null}){
   if(type==='gunner'){
-    const peek=chooseGunnerPeekGoal(position,target,grid,obstacles);
+    const peek=chooseGunnerPeekGoal(position,target,grid,obstacles,squadRole,strafeSign);
     if(peek)return peek;
   }
-  if(type==='scout'||type==='heavy'||type==='gunner')return ringGoal({type,position,target,grid,obstacles,strafeSign});
+  if(type==='scout'||type==='heavy'||type==='gunner')return ringGoal({type,position,target,grid,obstacles,strafeSign,squadRole});
   return{x:target.x,z:target.z};
 }
 export function createTacticalBrain(type,initialTarget,seed=1){
@@ -184,10 +195,10 @@ export function stepTacticalBrain(brain,{dt,type,canAttack,hasLineOfSight,attack
   brain.state=!hasLineOfSight?'search':type==='scout'?'flank':type==='gunner'?'hold':'approach';
   return{attack:false,telegraph:false,state:brain.state};
 }
-export function updateTacticalPath(brain,position,target,grid,obstacles,dt,type){
+export function updateTacticalPath(brain,position,target,grid,obstacles,dt,type,squadRole=brain.squadRole||null){
   brain.repathTimer=Math.max(0,brain.repathTimer-dt);
   if(brain.repathTimer<=0){
-    brain.goal=chooseTacticalGoal({type,position,target,grid,obstacles,strafeSign:brain.strafeSign});
+    brain.goal=chooseTacticalGoal({type,position,target,grid,obstacles,strafeSign:brain.strafeSign,squadRole});
     brain.path=findNavigationPath(grid,position,brain.goal);brain.pathIndex=0;
     brain.repathTimer=type==='scout'?.58:type==='gunner'?.82:1.05;
   }

@@ -553,3 +553,15 @@ button.upgrade-option:hover {
 
 /* Combat 1.8: critical hit confirmation remains readable without obscuring the crosshair. */
 .hitmarker.headshot i{background:#ffe08a;box-shadow:0 0 8px #ffbf55,0 0 15px #ff8a3d}
+
+
+/* COMBAT INTELLIGENCE 2.1 — directional threat feedback */
+.threat-indicator{position:fixed;z-index:4;top:calc(50% - 78px);left:50%;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:150px;transform:translateX(-50%);opacity:0;pointer-events:none;color:#ffb36d;text-shadow:0 0 12px currentColor;transition:opacity .12s ease}
+.threat-indicator.active{opacity:1}
+.threat-indicator.critical{color:#ff5e55;animation:threat-pulse .42s ease-in-out infinite alternate}
+.threat-indicator__arrow{display:block;font:700 22px/1 Orbitron,sans-serif;transform-origin:50% 55%;filter:drop-shadow(0 0 7px currentColor);will-change:transform}
+.threat-indicator__label{font:700 7px/1.3 Orbitron,sans-serif;letter-spacing:1.25px;white-space:nowrap;color:#ffe0c4}
+.threat-indicator.critical .threat-indicator__label{color:#ffd0ca}
+@keyframes threat-pulse{from{filter:brightness(.9);opacity:.78}to{filter:brightness(1.35);opacity:1}}
+@media(prefers-reduced-motion:reduce){.threat-indicator.critical{animation:none}}
+@media(max-width:620px){.threat-indicator{top:calc(50% - 66px);min-width:130px}.threat-indicator__arrow{font-size:19px}.threat-indicator__label{font-size:6px}}
