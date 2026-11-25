@@ -99,7 +99,7 @@ assert.ok(js.includes('renderer.setPixelRatio(nextPixelRatio);'), 'Quality profi
 assert.ok(js.includes('renderer.setSize(width, height, false);'), 'Renderer must preserve CSS-controlled canvas sizing');
 assert.ok(js.includes('window.visualViewport?.addEventListener'), 'Visual viewport resize handling is missing');
 assert.ok(js.includes('new ResizeObserver(resizeRenderer)'), 'Container resize observation is missing');
-assert.ok(js.includes('graphicsQuality }'), 'Graphics quality is not persisted with settings');
+assert.ok(js.includes('graphicsQuality, mouseSensitivity, fieldOfView }'), 'Graphics quality and FPS preferences are not persisted with settings');
 assert.match(css, /\.graphics-quality-control/);
 assert.match(readme, /## Graphics quality/);
 assert.match(readme, /Visual Build 1\.2/);
