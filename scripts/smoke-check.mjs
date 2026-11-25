@@ -252,7 +252,9 @@ assert.ok(coverModule.includes('export function createCoverCollider'), 'Cover co
 assert.ok(coverModule.includes('export function applyCoverDamage'), 'Cover health state machine is missing');
 assert.ok(coverTest.includes('cover-system checks passed'), 'Cover regression suite is missing');
 assert.ok(tacticalModule.includes("type==='scout'?22:14"), 'Scout and Heavy must prioritize visible flank angles');
+assert.ok(tacticalModule.includes('function chooseGunnerPeekGoal'), 'Gunner cover-edge peek selection is missing');
 assert.ok(tacticalTest.includes('Scout must route around the barricade end'), 'Cover flanking regression test is missing');
+assert.ok(tacticalTest.includes('Gunner should peek around a cover edge'), 'Gunner cover-peek regression test is missing');
 assert.match(vtkManifest, /"collision_proxy_in_game": true/);
 assert.match(vtkDoc, /procedural fallback remains active/);
 assert.ok(readme.includes('destructible tactical cover'), 'README must describe functional cover');
