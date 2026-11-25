@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#080d17">
-  <meta name="description" content="ARENA ZERO — a cinematic third-person PvE arena shooter. Survive the machine waves.">
+  <meta name="description" content="ARENA ZERO — a first-person sci-fi PvE shooter. Survive the machine waves.">
   <title>ARENA ZERO // PvE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
     <div class="vignette"></div>
     <div id="damage-flash" class="damage-flash"></div>
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // VISUAL BUILD 1.4</small></div></div>
+      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>FPS FOUNDATION // BUILD 1.5</small></div></div>
       <div class="wave-block"><small>SECTOR</small><strong id="wave">01</strong><span id="phase">STANDBY</span></div>
       <div class="top-right"><span class="live-dot"></span> SYSTEM ONLINE <span class="upgrade-counter">UPGRADES <b id="upgrade-count">00</b></span></div>
     </header>
@@ -46,7 +46,8 @@
       <div class="health-panel">
         <div class="hud-label"><span>VITALS</span><strong id="health-text">100 / 100</strong></div>
         <div class="bar"><span id="health-bar"></span></div>
-        <div class="hud-label sub"><span>ARMOUR INTEGRITY</span><span>ACTIVE</span></div>
+        <div class="hud-label sub"><span>STAMINA</span><strong id="stamina-text">100%</strong></div>
+        <div class="bar stamina-bar"><span id="stamina-bar"></span></div>
       </div>
       <div class="weapon-panel">
         <div class="weapon-name" id="weapon-name">ARC RIFLE</div>
@@ -58,14 +59,20 @@
         </div>
       </div>
       <div class="ammo-panel"><div class="ammo-number" id="ammo">30<span> / 30</span></div><small><span id="weapon-short">RIFLE</span> <b id="reload-label">READY</b></small></div>
-      <div class="controls-panel"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SHIFT</kbd> SPRINT</span><span><kbd>SPACE</kbd> DASH</span><span><kbd>R</kbd> RELOAD</span></div>
+      <div class="controls-panel">
+        <span><kbd>W A S D</kbd> MOVE</span><span><kbd>SHIFT</kbd> SPRINT</span>
+        <span><kbd>SPACE</kbd> JUMP</span><span><kbd>CTRL</kbd> CROUCH / SLIDE</span>
+        <span><kbd>RMB</kbd> ADS · <kbd>LMB</kbd> FIRE</span><span><kbd>Q</kbd> DASH · <kbd>R</kbd> RELOAD</span>
+      </div>
     </section>
     <aside class="settings">
-      <div class="settings-title">COMBAT ASSIST <span>◆</span></div>
-      <label class="toggle-row"><span>AIM ASSIST <small>SMART TARGETING</small></span><input id="aim-toggle" type="checkbox" checked><i></i></label>
-      <label class="toggle-row"><span>AUTO FIRE <small>CONTINUOUS ENGAGEMENT</small></span><input id="fire-toggle" type="checkbox" checked><i></i></label>
+      <div class="settings-title">ACCESSIBILITY ASSISTS <span>◆</span></div>
+      <label class="toggle-row"><span>AIM ASSIST <small>OPTIONAL PvE TARGETING</small></span><input id="aim-toggle" type="checkbox"><i></i></label>
+      <label class="toggle-row"><span>AUTO FIRE <small>OPTIONAL PvE ASSIST</small></span><input id="fire-toggle" type="checkbox"><i></i></label>
       <div class="range-row"><label for="aim-range">LOCK RANGE <b id="range-value">24m</b></label><input id="aim-range" type="range" min="8" max="36" value="24"></div>
-      <div class="assist-note"><span class="live-dot"></span> PvE ASSIST SYSTEM ENABLED</div>
+      <div class="range-row"><label for="look-sensitivity">LOOK SENSITIVITY <b id="sensitivity-value">1.0x</b></label><input id="look-sensitivity" type="range" min=".5" max="2" step=".1" value="1"></div>
+      <div class="range-row"><label for="fov-range">FIELD OF VIEW <b id="fov-value">82°</b></label><input id="fov-range" type="range" min="70" max="105" step="1" value="82"></div>
+      <div class="assist-note"><span class="live-dot"></span> STANDARD FPS PROFILE // ASSISTS OFF</div>
     </aside>
     <div id="start-screen" class="overlay">
       <div class="start-card">
@@ -76,7 +83,7 @@
         <h1>ARENA<span>ZERO</span></h1>
         <p>THE MACHINES HAVE TAKEN THE SECTOR.<br>YOU ARE THE LAST LINE OF DEFENCE.</p>
         <div class="start-meta">
-          <span>MODE <b>ENDLESS PvE</b></span>
+          <span>MODE <b>FIRST-PERSON PvE</b></span>
           <span>LOADOUT <b>3 WEAPONS</b></span>
           <span>THREATS <b>3 CLASSES</b></span>
         </div>
@@ -97,8 +104,19 @@
         <div id="boot-error" class="boot-error hidden" role="alert" aria-live="assertive"></div>
         <div class="start-card__footer">
           <span><i class="live-dot"></i> ALL SYSTEMS NOMINAL</span>
-          <small>WASD MOVE · MOUSE LOOK · 1–3 SWITCH WEAPONS</small>
+          <small>WASD MOVE · MOUSE LOOK · SPACE JUMP · SHIFT SPRINT · RMB AIM</small>
         </div>
+      </div>
+    </div>
+    <div id="pause-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="start-card">
+        <div class="eyebrow">SIMULATION PAUSED</div>
+        <h1 id="pause-title">PAUSE<span> MENU</span></h1>
+        <p>YOUR RUN IS SUSPENDED.<br>RESUME WHEN READY.</p>
+        <button id="resume-button" class="start-cta" type="button">
+          <span class="start-cta__copy"><strong>RESUME</strong><small>RETURN TO COMBAT</small></span>
+          <span class="start-cta__arrow" aria-hidden="true">↗</span>
+        </button>
       </div>
     </div>
     <div id="end-screen" class="overlay hidden">

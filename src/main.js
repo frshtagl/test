@@ -1,3 +1,6 @@
+import { parseBinarySTL } from './assets/binary-stl.mjs';
+import { createFpsControllerState, resetFpsControllerState, stepFpsController } from './gameplay/fps-controller.mjs';
+
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
   const sources = [
@@ -68,7 +71,8 @@ try {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070d18);
 scene.fog = new THREE.FogExp2(0x070d18, .0155);
-const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, .1, 150);
+const camera = new THREE.PerspectiveCamera(82, innerWidth / innerHeight, .1, 150);
+camera.rotation.order = 'YXZ';
 camera.position.set(0, 12, 29);
 camera.lookAt(0, 1, 0);
 const renderer = new THREE.WebGLRenderer({
@@ -587,6 +591,45 @@ function buildArenaArchitectureDetails() {
 }
 buildArenaArchitectureDetails();
 
+async function loadVTKStaticMesh(relativePath, material, position, rotation = [0, 0, 0]) {
+  const response = await fetch(new URL(relativePath, document.baseURI));
+  if (!response.ok) throw new Error('VTK asset request failed: ' + relativePath + ' (' + response.status + ')');
+  if (typeof DecompressionStream === 'undefined') throw new Error('This browser does not support gzip decompression.');
+  const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
+  const buffer = await new Response(stream).arrayBuffer();
+  const parsed = parseBinarySTL(buffer);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(parsed.positions, 3));
+  geometry.setAttribute('normal', new THREE.BufferAttribute(parsed.normals, 3));
+  geometry.computeBoundingSphere();
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(position[0], position[1], position[2]);
+  mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.assetPipeline = 'VTK';
+  scene.add(mesh);
+  return mesh;
+}
+
+async function loadVTKEnvironmentAssets() {
+  const placements = [
+    ['wall_terminal.stl.gz', [23.17, 2.85, 0], [0, Math.PI / 2, 0], architecturePanelMat],
+    ['wall_terminal.stl.gz', [-23.17, 2.85, 0], [0, -Math.PI / 2, 0], architecturePanelMat],
+    ['wall_terminal.stl.gz', [0, 2.85, 23.17], [0, 0, 0], architecturePanelMat],
+    ['wall_terminal.stl.gz', [0, 2.85, -23.17], [0, Math.PI, 0], architecturePanelMat],
+    ['floor_service_hatch.stl.gz', [0, .002, -14], [0, 0, 0], architectureRailMat],
+    ['floor_service_hatch.stl.gz', [0, .002, 14], [0, Math.PI / 2, 0], architectureRailMat]
+  ];
+  const results = await Promise.allSettled(placements.map(([file, position, rotation, material]) =>
+    loadVTKStaticMesh('assets/vtk/' + file, material, position, rotation)
+  ));
+  const loaded = results.filter(result => result.status === 'fulfilled').length;
+  for (const result of results) if (result.status === 'rejected') console.warn('[ARENA ZERO] Optional VTK prop skipped:', result.reason);
+  console.info('[ARENA ZERO] VTK static props loaded:', loaded, '/', placements.length);
+}
+loadVTKEnvironmentAssets().catch(error => console.warn('[ARENA ZERO] VTK asset pipeline unavailable; using procedural arena:', error));
+
 function resolveArenaCollisions(position, radius) {
   for (let pass = 0; pass < 2; pass++) {
     for (const obstacle of arenaColliders) {
@@ -751,16 +794,44 @@ function buildPlayerLeg(side) {
 const leftLeg = buildPlayerLeg(-1);
 const rightLeg = buildPlayerLeg(1);
 const playerParts = { leftArm, rightArm, leftLeg, rightLeg, torso: playerTorso, head: headRig };
+const viewModel = new THREE.Group();
+camera.add(viewModel);
+viewModel.visible = false;
+function buildViewModelArm(side) {
+  const arm = new THREE.Group();
+  arm.position.set(side * .34, -.34, -.48);
+  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(.125, .34, 4, 8), playerArmor);
+  upper.position.set(-side * .055, -.12, 0);
+  upper.rotation.z = side * .42;
+  arm.add(upper);
+  const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(.108, .38, 4, 8), playerDark);
+  forearm.position.set(-side * .1, -.34, -.15);
+  forearm.rotation.z = side * .28;
+  arm.add(forearm);
+  const cuff = new THREE.Mesh(new THREE.BoxGeometry(.25, .17, .2), playerArmor);
+  cuff.position.set(-side * .1, -.42, -.25);
+  arm.add(cuff);
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(.105, 10, 8), playerJoint);
+  hand.position.set(-side * .12, -.52, -.34);
+  arm.add(hand);
+  arm.traverse(object => { if (object.isMesh) { object.castShadow = true; object.receiveShadow = true; } });
+  return arm;
+}
+viewModel.add(buildViewModelArm(-1), buildViewModelArm(1));
 const gunGroup = new THREE.Group();
-player.add(gunGroup);
+viewModel.add(gunGroup);
+gunGroup.position.set(-.12, -1.45, 0);
 const muzzle = new THREE.Object3D();
-player.add(muzzle);
+viewModel.add(muzzle);
 player.position.set(0, 0, 8);
+playerRig.visible = false;
+const fpsMotion = createFpsControllerState();
+let jumpPressed = false, slidePressed = false, recoilPitch = 0, paused = false;
 
 const weapons = {
-  rifle: { name: 'ARC RIFLE', short: 'RIFLE', mag: 30, damage: 29, rate: 145, reload: 1200, pellets: 1, spread: .012, speed: 64, color: 0x50e6f2, description: 'BALANCED // FULL AUTO' },
-  shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, speed: 48, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
-  precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, speed: 95, color: 0xb99aff, description: 'HIGH IMPACT // SLOW FIRE' }
+  rifle: { name: 'ARC RIFLE', short: 'RIFLE', mag: 30, damage: 29, rate: 145, reload: 1200, pellets: 1, spread: .012, speed: 64, recoil: .014, adsFov: 58, color: 0x50e6f2, description: 'CONTROLLED // FULL AUTO' },
+  shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, speed: 48, recoil: .052, adsFov: 62, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
+  precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, speed: 95, recoil: .038, adsFov: 43, color: 0xb99aff, description: 'HIGH IMPACT // SLOW FIRE' }
 };
 const magazines = { rifle: 30, shotgun: 8, precision: 6 };
 let currentWeapon = 'rifle';
@@ -863,7 +934,7 @@ function buildWeaponVisual() {
     // Exposed energy cell distinguishes the ARC rifle from the other two weapons.
     box(gunGroup, .5, 1.34, -.48, .055, .16, .22, glow);
   }
-  muzzle.position.set(.35, 1.36, barrelZ - barrelLength * .57);
+  muzzle.position.set(.35 + gunGroup.position.x, 1.36 + gunGroup.position.y, barrelZ - barrelLength * .57 + gunGroup.position.z);
   $('weapon-name').textContent = def.name;
   $('weapon-desc').textContent = def.description;
   $('weapon-short').textContent = def.short;
@@ -882,8 +953,9 @@ function switchWeapon(id) {
   showToast('LOADOUT // ' + weapons[id].name);
 }
 let keys = {};
-let yaw = 0, pitch = -.13, started = false, gameOver = false;
-let aimAssist = true, autoFire = true, aimRange = 24;
+let yaw = 0, pitch = 0, started = false, gameOver = false;
+let aimAssist = false, autoFire = false, aimRange = 24;
+let mouseSensitivity = 1.0, fieldOfView = 82;
 let health = 100, kills = 0, wave = 1, bestKills = 0;
 let reloading = false, reloadRemaining = 0, lastShot = 0;
 let dashCooldown = 0, invuln = 0, spawnTimer = 0, spawnCooldown = 0;
@@ -953,9 +1025,16 @@ try {
   const storedBest = Number(localStorage.getItem('arena-zero-best') || 0);
   bestKills = Number.isFinite(storedBest) && storedBest > 0 ? Math.floor(storedBest) : 0;
   const saved = JSON.parse(localStorage.getItem('arena-zero-settings') || '{}');
-  if (typeof saved.aimAssist === 'boolean') aimAssist = saved.aimAssist;
-  if (typeof saved.autoFire === 'boolean') autoFire = saved.autoFire;
-  if (Number.isFinite(saved.aimRange)) aimRange = THREE.MathUtils.clamp(saved.aimRange, 8, 36);
+  if (saved.version === 2) {
+    if (typeof saved.aimAssist === 'boolean') aimAssist = saved.aimAssist;
+    if (typeof saved.autoFire === 'boolean') autoFire = saved.autoFire;
+    if (Number.isFinite(saved.aimRange)) aimRange = THREE.MathUtils.clamp(saved.aimRange, 8, 36);
+    if (Number.isFinite(saved.mouseSensitivity)) mouseSensitivity = THREE.MathUtils.clamp(saved.mouseSensitivity, .5, 2);
+    if (Number.isFinite(saved.fieldOfView)) fieldOfView = THREE.MathUtils.clamp(saved.fieldOfView, 70, 105);
+  } else {
+    aimAssist = false;
+    autoFire = false;
+  }
   if (saved.graphicsQuality && Object.prototype.hasOwnProperty.call(GRAPHICS_QUALITY_PRESETS, saved.graphicsQuality)) {
     graphicsQuality = saved.graphicsQuality;
   }
@@ -964,13 +1043,19 @@ $('aim-toggle').checked = aimAssist;
 $('fire-toggle').checked = autoFire;
 $('aim-range').value = aimRange;
 $('graphics-quality').value = graphicsQuality;
+$('look-sensitivity').value = mouseSensitivity;
+$('fov-range').value = fieldOfView;
+$('sensitivity-value').textContent = mouseSensitivity.toFixed(1) + 'x';
+$('fov-value').textContent = Math.round(fieldOfView) + '°';
+camera.fov = fieldOfView;
+camera.updateProjectionMatrix();
 resizeRenderer();
 $('range-value').textContent = aimRange + 'm';
 $('best-kills').textContent = String(bestKills).padStart(3, '0');
 
 function saveSettings() {
   try {
-    localStorage.setItem('arena-zero-settings', JSON.stringify({ aimAssist, autoFire, aimRange, graphicsQuality }));
+    localStorage.setItem('arena-zero-settings', JSON.stringify({ version: 2, aimAssist, autoFire, aimRange, graphicsQuality, mouseSensitivity, fieldOfView }));
   } catch (_) {}
 }
 function showToast(message) {
@@ -989,6 +1074,8 @@ function updateHUD() {
   $('hostiles').textContent = String(enemies.length + spawnQueue).padStart(2, '0');
   $('health-text').textContent = Math.ceil(health) + ' / ' + maxHealth;
   $('health-bar').style.width = (health / maxHealth * 100) + '%';
+  $('stamina-bar').style.width = fpsMotion.stamina + '%';
+  $('stamina-text').textContent = Math.round(fpsMotion.stamina) + '%';
   $('upgrade-count').textContent = String(upgradesTaken).padStart(2, '0');
   $('threat').textContent = wave < 3 ? 'LOW' : wave < 6 ? 'ELEVATED' : 'CRITICAL';
   $('phase').textContent = started ? 'ACTIVE' : 'STANDBY';
@@ -1326,6 +1413,7 @@ function shoot() {
   const fireDelay = def.rate / runModifiers.fireRate;
   if (magazines[currentWeapon] <= 0 || reloading || performance.now() - lastShot < fireDelay) return;
   lastShot = performance.now();
+  recoilPitch = Math.min(.18, recoilPitch + def.recoil * (keys.Mouse2 ? .72 : 1));
   magazines[currentWeapon]--;
   const origin = new THREE.Vector3();
   muzzle.getWorldPosition(origin);
@@ -1365,6 +1453,9 @@ function damage(amount) {
   updateHUD();
   if (health <= 0) {
     gameOver = true;
+    paused = false;
+    viewModel.visible = false;
+    $('pause-screen').classList.add('hidden');
     bestKills = Math.max(bestKills, kills);
     try { localStorage.setItem('arena-zero-best', String(bestKills)); } catch (_) {}
     document.exitPointerLock?.();
@@ -1453,6 +1544,13 @@ function eliminateEnemy(enemy) {
 function start() {
   started = true;
   gameOver = false;
+  paused = false;
+  $('pause-screen').classList.add('hidden');
+  viewModel.visible = true;
+  resetFpsControllerState(fpsMotion);
+  jumpPressed = false;
+  slidePressed = false;
+  recoilPitch = 0;
   runModifiers.damage = 1;
   runModifiers.fireRate = 1;
   runModifiers.reloadSpeed = 1;
@@ -1501,9 +1599,13 @@ function start() {
   }
   effects.length = 0;
   player.position.set(0, 0, 8);
-  resolveArenaCollisions(player.position, .55);
+  resolveArenaCollisions(player.position, .45);
   yaw = 0;
-  pitch = -.13;
+  pitch = 0;
+  camera.position.set(player.position.x, player.position.y + 1.68, player.position.z);
+  camera.rotation.set(0, 0, 0, 'YXZ');
+  camera.fov = fieldOfView;
+  camera.updateProjectionMatrix();
   currentWeapon = 'rifle';
   buildWeaponVisual();
   $('start-screen').classList.add('hidden');
@@ -1523,6 +1625,18 @@ function start() {
 }
 $('aim-toggle').addEventListener('change', event => { aimAssist = event.target.checked; saveSettings(); });
 $('fire-toggle').addEventListener('change', event => { autoFire = event.target.checked; saveSettings(); });
+$('look-sensitivity').addEventListener('input', event => {
+  mouseSensitivity = THREE.MathUtils.clamp(Number(event.target.value) || 1, .5, 2);
+  $('sensitivity-value').textContent = mouseSensitivity.toFixed(1) + 'x';
+  saveSettings();
+});
+$('fov-range').addEventListener('input', event => {
+  fieldOfView = THREE.MathUtils.clamp(Number(event.target.value) || 82, 70, 105);
+  $('fov-value').textContent = Math.round(fieldOfView) + '°';
+  if (!keys.Mouse2) camera.fov = fieldOfView;
+  camera.updateProjectionMatrix();
+  saveSettings();
+});
 $('graphics-quality').addEventListener('change', event => {
   const selectedQuality = event.target.value;
   if (!Object.prototype.hasOwnProperty.call(GRAPHICS_QUALITY_PRESETS, selectedQuality)) {
@@ -1542,14 +1656,28 @@ $('aim-range').addEventListener('input', event => {
 renderer.domElement.addEventListener('click', () => {
   if (started && !gameOver && document.pointerLockElement !== renderer.domElement) renderer.domElement.requestPointerLock();
 });
-renderer.domElement.addEventListener('pointerdown', event => { if (event.button === 0) keys.Mouse0 = true; });
-addEventListener('pointerup', event => { if (event.button === 0) keys.Mouse0 = false; });
+renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
+renderer.domElement.addEventListener('pointerdown', event => {
+  if (event.button === 0) keys.Mouse0 = true;
+  if (event.button === 2) keys.Mouse2 = true;
+});
+addEventListener('pointerup', event => {
+  if (event.button === 0) keys.Mouse0 = false;
+  if (event.button === 2) keys.Mouse2 = false;
+});
 addEventListener('keydown', event => {
   if (event.code === 'F3') {
     if (!event.repeat) setGraphicsDiagnosticsVisible(!graphicsDiagnosticsEnabled);
     event.preventDefault();
     return;
   }
+  if (event.code === 'Escape' && started && !gameOver && !intermission) {
+    event.preventDefault();
+    if (paused) resumeGame();
+    else pauseGame();
+    return;
+  }
+  if (paused) return;
   if (intermission) {
     if (event.code === 'Digit1') chooseUpgrade(0);
     else if (event.code === 'Digit2') chooseUpgrade(1);
@@ -1557,15 +1685,17 @@ addEventListener('keydown', event => {
     return;
   }
   keys[event.code] = true;
-  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
-  if (event.repeat && ['KeyR', 'KeyT', 'KeyF', 'Digit1', 'Digit2', 'Digit3'].includes(event.code)) return;
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ControlLeft', 'ControlRight'].includes(event.code)) event.preventDefault();
+  if (event.repeat && ['Space', 'KeyQ', 'KeyR', 'KeyT', 'KeyF', 'Digit1', 'Digit2', 'Digit3'].includes(event.code)) return;
+  if (event.code === 'Space') jumpPressed = true;
+  if (['ControlLeft', 'ControlRight', 'KeyC'].includes(event.code)) slidePressed = true;
   if (event.code === 'KeyR') reload();
   if (event.code === 'KeyT') $('aim-toggle').click();
   if (event.code === 'KeyF') $('fire-toggle').click();
   if (event.code === 'Digit1') switchWeapon('rifle');
   if (event.code === 'Digit2') switchWeapon('shotgun');
   if (event.code === 'Digit3') switchWeapon('precision');
-  if (event.code === 'Space' && started && dashCooldown <= 0) {
+  if (event.code === 'KeyQ' && started && dashCooldown <= 0) {
     const direction = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
     const dashStart = player.position.clone();
     const dashEnd = dashStart.clone().addScaledVector(direction, 5);
@@ -1578,22 +1708,27 @@ addEventListener('keydown', event => {
     } else {
       player.position.copy(dashEnd);
     }
-    resolveArenaCollisions(player.position, .55);
+    resolveArenaCollisions(player.position, .45);
     player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
     player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
+    fpsMotion.velocityX = 0;
+    fpsMotion.velocityZ = 0;
     dashCooldown = 2;
     invuln = .25;
     addBurst(player.position.clone().add(new THREE.Vector3(0, 1, 0)), 0x50e6f2, .35);
   }
 });
 addEventListener('keyup', event => { keys[event.code] = false; });
-addEventListener('blur', () => { keys = {}; });
-addEventListener('pointercancel', () => { keys.Mouse0 = false; });
+addEventListener('blur', () => { keys = {}; jumpPressed = false; slidePressed = false; });
+addEventListener('pointercancel', () => { keys.Mouse0 = false; keys.Mouse2 = false; });
 addEventListener('mousemove', event => {
-  if (document.pointerLockElement === renderer.domElement) {
-    yaw -= event.movementX * .0022;
-    pitch = THREE.MathUtils.clamp(pitch - event.movementY * .0018, -.65, .35);
+  if (document.pointerLockElement === renderer.domElement && !paused) {
+    yaw -= event.movementX * .0022 * mouseSensitivity;
+    pitch = THREE.MathUtils.clamp(pitch - event.movementY * .0018 * mouseSensitivity, -1.48, 1.48);
   }
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && started && !gameOver && !intermission && !paused) pauseGame();
 });
 // Renderer size, camera projection and pixel ratio are updated together by resizeRenderer().
 document.addEventListener('pointerlockerror', () => {
@@ -1604,8 +1739,30 @@ document.addEventListener('pointerlockerror', () => {
 // Register only after all game listeners are ready, then replay any early click.
 window.__ARENA_ZERO_REGISTER_START__?.(start);
 
+function pauseGame() {
+  if (paused || !started || gameOver || intermission) return;
+  paused = true;
+  keys = {};
+  jumpPressed = false;
+  slidePressed = false;
+  viewModel.visible = false;
+  $('pause-screen').classList.remove('hidden');
+  document.exitPointerLock?.();
+}
+function resumeGame() {
+  if (!paused || gameOver) return;
+  paused = false;
+  $('pause-screen').classList.add('hidden');
+  viewModel.visible = true;
+  try {
+    const request = renderer.domElement.requestPointerLock?.();
+    if (request && typeof request.catch === 'function') request.catch(() => showToast('MOUSE LOOK UNAVAILABLE // KEYBOARD CONTROLS ACTIVE'));
+  } catch (_) {}
+}
+$('resume-button').addEventListener('click', resumeGame);
+
 function tick(dt) {
-  if (!started || gameOver || intermission) return;
+  if (!started || gameOver || intermission || paused) return;
   animationClock += dt;
   invuln = Math.max(0, invuln - dt);
   dashCooldown = Math.max(0, dashCooldown - dt);
@@ -1626,40 +1783,47 @@ function tick(dt) {
       updateHUD();
     }
   }
-  const movement = new THREE.Vector3();
-  if (keys.KeyW) movement.z -= 1;
-  if (keys.KeyS) movement.z += 1;
-  if (keys.KeyA) movement.x -= 1;
-  if (keys.KeyD) movement.x += 1;
-  const playerMoving = movement.lengthSq() > 0;
-  const sprinting = playerMoving && !!keys.ShiftLeft;
-  if (playerMoving) {
-    movement.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    player.position.addScaledVector(movement, dt * (sprinting ? 10 : 6) * runModifiers.moveSpeed);
-  }
+  const crouching = Boolean(keys.ControlLeft || keys.ControlRight || keys.KeyC);
+  const motion = stepFpsController(fpsMotion, {
+    yaw,
+    moveX: (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0),
+    moveForward: (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0),
+    sprint: Boolean(keys.ShiftLeft || keys.ShiftRight),
+    crouch: crouching,
+    jumpPressed,
+    slidePressed
+  }, dt, runModifiers.moveSpeed);
+  jumpPressed = false;
+  slidePressed = false;
+  const previousX = player.position.x, previousZ = player.position.z;
+  player.position.x += motion.dx;
+  player.position.z += motion.dz;
+  player.position.y = motion.height;
   player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
-  resolveArenaCollisions(player.position, .55);
+  const beforeCollisionX = player.position.x, beforeCollisionZ = player.position.z;
+  resolveArenaCollisions(player.position, .45);
   player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
+  if (Math.abs(player.position.x - beforeCollisionX) > .001 || Math.abs(player.position.x - previousX - motion.dx) > .03) fpsMotion.velocityX = 0;
+  if (Math.abs(player.position.z - beforeCollisionZ) > .001 || Math.abs(player.position.z - previousZ - motion.dz) > .03) fpsMotion.velocityZ = 0;
   player.rotation.y = yaw;
 
-  const playerCycle = animationClock * (sprinting ? 13 : 9);
-  const playerStride = playerMoving ? (sprinting ? .82 : .56) : .025;
-  playerParts.leftLeg.hip.rotation.x = Math.sin(playerCycle) * playerStride;
-  playerParts.rightLeg.hip.rotation.x = -Math.sin(playerCycle) * playerStride;
-  playerParts.leftLeg.knee.rotation.x = Math.max(0, -Math.sin(playerCycle)) * .42;
-  playerParts.rightLeg.knee.rotation.x = Math.max(0, Math.sin(playerCycle)) * .42;
-  playerParts.leftArm.rotation.x = .38 - Math.sin(playerCycle) * playerStride * .28;
-  playerParts.rightArm.rotation.x = .38 + Math.sin(playerCycle) * playerStride * .28;
-  playerParts.torso.position.y = 1.3 + (playerMoving ? Math.abs(Math.sin(playerCycle)) * .025 : Math.sin(animationClock * 2) * .012);
-  playerParts.head.rotation.y = Math.sin(animationClock * 1.35) * .025;
-
-  const cameraOffset = new THREE.Vector3(0, 4.1, 7.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-  camera.position.lerp(player.position.clone().add(cameraOffset), 1 - Math.pow(.001, dt));
-  const look = player.position.clone().add(new THREE.Vector3(0, 1.5, 0));
-  look.add(new THREE.Vector3(-Math.sin(yaw) * 8, pitch * 5, -Math.cos(yaw) * 8));
-  camera.lookAt(look);
+  const aiming = Boolean(keys.Mouse2);
+  const eyeHeight = THREE.MathUtils.lerp(1.68, 1.08, motion.crouchBlend);
+  camera.position.set(player.position.x, player.position.y + eyeHeight, player.position.z);
+  recoilPitch = Math.max(0, recoilPitch - dt * 1.65);
+  camera.rotation.set(THREE.MathUtils.clamp(pitch + recoilPitch, -1.48, 1.48), yaw, 0, 'YXZ');
+  const targetFov = aiming ? weapons[currentWeapon].adsFov : fieldOfView;
+  camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 12, dt);
+  camera.updateProjectionMatrix();
+  const bob = motion.moving ? Math.sin(motion.bobPhase) * (motion.sprinting ? .021 : .009) : 0;
+  const sway = motion.moving ? Math.sin(motion.bobPhase * .5) * .008 : 0;
+  viewModel.position.set(sway, -.025 - motion.crouchBlend * .075 + bob, aiming ? -.045 : 0);
+  viewModel.rotation.set(aiming ? .018 : 0, 0, Math.sin(motion.bobPhase * .5) * (motion.moving ? .012 : .003));
+  $('game-shell').classList.toggle('is-aiming', aiming);
+  $('stamina-bar').style.width = motion.stamina + '%';
+  $('stamina-text').textContent = Math.round(motion.stamina) + '%';
 
   // Keep target acquisition available to auto-fire; aim assist only controls bullet magnetism.
   target = nearestTarget();
