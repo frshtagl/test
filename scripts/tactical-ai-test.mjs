@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {createNavigationGrid,findNavigationPath,isWalkablePosition,isSegmentClear2D,chooseTacticalGoal,createTacticalBrain,stepTacticalBrain,updateTacticalPath} from '../src/gameplay/tactical-ai.mjs';
+const obstacles=[{x:0,z:0,halfX:1.5,halfZ:6}];
+const grid=createNavigationGrid(obstacles,{min:-10,max:10,cellSize:1,clearance:.4});
+const path=findNavigationPath(grid,{x:-8,z:0},{x:8,z:0});
+assert.ok(path.length>1,'A* must route around cover');
+let previous={x:-8,z:0};
+for(const point of path){assert.ok(isWalkablePosition(grid,point));assert.ok(isSegmentClear2D(previous,point,obstacles,.36));previous=point;}
+assert.ok(Math.hypot(previous.x-8,previous.z)<1.1);
+assert.deepEqual(findNavigationPath(grid,{x:-8,z:0},{x:8,z:0}),path);
+const open=createNavigationGrid([],{min:-20,max:20,cellSize:1});
+const target={x:0,z:0},enemy={x:0,z:16};
+const radii=['scout','heavy','gunner'].map(type=>{const p=chooseTacticalGoal({type,position:enemy,target,grid:open,obstacles:[]});return Math.hypot(p.x,p.z);});
+assert.ok(radii[0]<2.8&&radii[1]<3.7&&Math.abs(radii[2]-12.4)<1.1);
+const brain=createTacticalBrain('heavy',target,123);brain.attackCooldown=0;
+let step=stepTacticalBrain(brain,{dt:.1,type:'heavy',canAttack:true,hasLineOfSight:true,attackRate:1.3});
+assert.equal(step.state,'windup');assert.equal(step.telegraph,true);
+step=stepTacticalBrain(brain,{dt:.4,type:'heavy',canAttack:true,hasLineOfSight:true,attackRate:1.3});
+assert.equal(step.attack,false);
+step=stepTacticalBrain(brain,{dt:.5,type:'heavy',canAttack:true,hasLineOfSight:true,attackRate:1.3});
+assert.equal(step.attack,true);assert.equal(step.state,'recover');
+const nav=createTacticalBrain('scout',target,44);
+const waypoint=updateTacticalPath(nav,{x:-8,z:0},{x:8,z:0},grid,obstacles,.016,'scout');
+assert.ok(waypoint&&isWalkablePosition(grid,waypoint));
+console.log('ARENA ZERO tactical AI checks passed: A* cover routing, archetype spacing, deterministic paths and telegraphed attacks.');

@@ -174,11 +174,15 @@
 - [ ] Tune hit-zone dimensions against in-game enemy silhouettes
 
 ## 1.9 — Tactical enemy AI and navigation
-- [ ] Explicit enemy finite-state machines and attack telegraphs
-- [ ] Perception: field of view, line of sight and last-known player position
-- [ ] Local obstacle avoidance, stuck detection and recovery
-- [ ] Scout flanking, Gunner repositioning and Heavy weak-point behavior
-- [ ] Tactical cover selection after navigation tests pass
+- [x] Explicit enemy attack state machines with interruptible wind-up and recovery
+- [x] Line-of-sight perception and last-known player position; no live tracking through walls
+- [x] Deterministic A* navigation on an inflated arena-collider grid
+- [x] Path smoothing with cover checks, periodic replanning and stuck recovery
+- [x] Scout flanking, Gunner visible firing-position selection and Heavy close-range pressure
+- [x] Visible Scout strike and Heavy slam telegraphs with dodge/cancel windows
+- [x] Automated tests for path routing, cover clearance, archetype spacing and attack timing
+- [ ] Browser playtest and tune enemy spacing, telegraph timing and navigation around random crate layouts
+- [ ] Integrate the VTK cover barricade with a validated collision/navigation proxy
 
 ## 2.0 — Audio, accessibility and encounter design
 - [ ] Spatial weapon/enemy audio and combat telegraphs

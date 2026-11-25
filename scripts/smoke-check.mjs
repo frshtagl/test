@@ -216,7 +216,7 @@ assert.ok(combatModule.includes('export function rayAabb'));
 assert.ok(combatModule.includes('export function raySphere'));
 assert.ok(combatDoc.includes('Heavy rear reactor'));
 assert.ok(readme.includes('immediate hitscan with cover occlusion'));
-assert.match(js, /enemy\.rotation\.y = Math\.atan2\(-direction\.x, -direction\.z\)/);
+assert.match(js, /enemy\.rotation\.y = Math\.atan2\(-facing\.x, -facing\.z\)/);
 assert.doesNotMatch(js, /enemy\.userData\.hp -= 1/);
 assert.match(js, /disposeObject3D/);
 assert.match(js, /disposeObject3D\(gunGroup\)/);

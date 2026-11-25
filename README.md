@@ -61,9 +61,15 @@ Available modules improve weapon damage, fire rate, reload speed, movement speed
 
 ## Enemy classes
 
-- Scout: fast melee attacker
-- Gunner: ranged attacker that maintains distance
-- Heavy: slow, high-health bruiser
+- **Scout:** flanks around the player, closes to melee range and telegraphs its strike.
+- **Gunner:** navigates to clear firing positions, holds medium range and charges projectiles before firing.
+- **Heavy:** advances through cover, faces visible targets, exposes its rear reactor and telegraphs a wide-area slam.
+
+All classes use line-of-sight perception and last-known player position. They do not track the player through solid cover.
+
+## Tactical AI
+
+Enemy navigation uses a deterministic A* grid built from the arena collision boxes. Routes are smoothed only when the segment clears inflated cover. Enemies replan when blocked and reverse their flank preference after repeated failed progress. Scout strikes and Heavy slams have visible wind-up warnings; leaving the marked range cancels the attack. Gunners reposition for line of sight and their projectiles remain blockable by cover. See docs/TACTICAL_AI.md.
 
 ## Persistence
 
@@ -86,8 +92,11 @@ After Pages is enabled, use Run workflow whenever you want to publish a new buil
 - src/main.js — Three.js scene, controls, enemy AI, combat and game loop
 - src/gameplay/weapon-system.mjs — deterministic weapon state machine
 - src/gameplay/combat.mjs — renderer-independent ballistics and obstruction resolution
+- src/gameplay/tactical-ai.mjs — deterministic A* navigation and enemy attack state machine
 - scripts/combat-test.mjs — deterministic spread and hitscan regression tests
+- scripts/tactical-ai-test.mjs — navigation, archetype spacing and attack regression tests
 - docs/COMBAT_SYSTEM.md — combat architecture and weapon tuning specification
+- docs/TACTICAL_AI.md — enemy perception, navigation and attack design
 - src/styles.css — interface and responsive styling
 - .github/workflows/quality.yml — syntax and integration checks on every push
 - .github/workflows/deploy.yml — manual GitHub Pages deployment
