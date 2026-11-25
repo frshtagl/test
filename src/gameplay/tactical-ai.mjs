@@ -117,7 +117,37 @@ function ringGoal({type,position,target,grid,obstacles,strafeSign}){
   if(best)return best;
   return{x:clamp(target.x+Math.cos(currentAngle)*radius,grid.min,grid.max),z:clamp(target.z+Math.sin(currentAngle)*radius,grid.min,grid.max)};
 }
+function chooseGunnerPeekGoal(position,target,grid,obstacles){
+  if(hasLineOfSight2D(position,target,obstacles,.06))return null;
+  let best=null,bestScore=Infinity;
+  for(const obstacle of obstacles){
+    if(!obstacle.cover)continue;
+    const sideX=Math.sign(position.x-obstacle.x)||1;
+    const sideZ=Math.sign(position.z-obstacle.z)||1;
+    for(const margin of [.8,1.4,2,2.8,3.6,4.4,5.2]){
+      const candidates=[
+        {x:obstacle.x+sideX*(obstacle.halfX+.9),z:obstacle.z+obstacle.halfZ+margin},
+        {x:obstacle.x+sideX*(obstacle.halfX+.9),z:obstacle.z-obstacle.halfZ-margin},
+        {x:obstacle.x+obstacle.halfX+margin,z:obstacle.z+sideZ*(obstacle.halfZ+.9)},
+        {x:obstacle.x-obstacle.halfX-margin,z:obstacle.z+sideZ*(obstacle.halfZ+.9)}
+      ];
+      for(const candidate of candidates){
+        if(!isWalkablePosition(grid,candidate))continue;
+        if(!hasLineOfSight2D(candidate,target,obstacles,.06))continue;
+        const targetDistance=distance(candidate,target);
+        if(targetDistance<7||targetDistance>16)continue;
+        const score=distance(position,candidate)+Math.abs(targetDistance-12.4)*1.3+margin*.12;
+        if(score<bestScore){bestScore=score;best=candidate;}
+      }
+    }
+  }
+  return best;
+}
 export function chooseTacticalGoal({type,position,target,grid,obstacles=grid.obstacles,strafeSign=1}){
+  if(type==='gunner'){
+    const peek=chooseGunnerPeekGoal(position,target,grid,obstacles);
+    if(peek)return peek;
+  }
   if(type==='scout'||type==='heavy'||type==='gunner')return ringGoal({type,position,target,grid,obstacles,strafeSign});
   return{x:target.x,z:target.z};
 }
