@@ -100,12 +100,21 @@
 - [ ] Projectile trails and environmental debris
 - [ ] Effect pooling review under sustained combat
 
-## 1.2 — Animation and camera polish
+## 1.2 — Rendering pipeline and resolution
+- [x] Add Low, Medium, High and Ultra graphics presets
+- [x] Add quality-specific render pixel-ratio ceilings and pixel budgets
+- [x] Apply conservative quality limits on compact/touch displays
+- [x] Recalculate pixel ratio, drawing-buffer size and camera aspect on resize
+- [x] Observe viewport/container resizing without changing the canvas CSS layout
+- [x] Persist graphics quality alongside existing local settings
+- [ ] Browser visual comparison and per-tier frame-time measurements
+
+## 1.3 — Animation and camera polish
 - [ ] Player weapon handling and reload animation refinement
 - [ ] Enemy attack and death animation refinement
 - [ ] Third-person camera collision and response review
 
-## 1.3 — Performance and visual QA
+## 1.4 — Performance and visual QA
 - [ ] Before/after browser screenshots
 - [ ] Desktop and mobile visual review
 - [ ] FPS, frame-time and draw-call measurements

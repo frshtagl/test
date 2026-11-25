@@ -21,21 +21,109 @@ const THREE = await loadThreeModule();
 
 const $ = id => document.getElementById(id);
 const root = $('game');
+
+const GRAPHICS_QUALITY_PRESETS = Object.freeze({
+  low: {
+    label: 'LOW',
+    description: 'PERFORMANCE PRIORITY',
+    pixelRatio: 1,
+    pixelBudget: 3500000,
+    mobilePixelRatio: .9,
+    mobilePixelBudget: 1600000
+  },
+  medium: {
+    label: 'MEDIUM',
+    description: 'BALANCED QUALITY',
+    pixelRatio: 1.25,
+    pixelBudget: 6000000,
+    mobilePixelRatio: 1.05,
+    mobilePixelBudget: 2200000
+  },
+  high: {
+    label: 'HIGH',
+    description: 'HIGH VISUAL DETAIL',
+    pixelRatio: 1.65,
+    pixelBudget: 10000000,
+    mobilePixelRatio: 1.25,
+    mobilePixelBudget: 3000000
+  },
+  ultra: {
+    label: 'ULTRA',
+    description: 'MAXIMUM PRACTICAL QUALITY',
+    pixelRatio: 2,
+    pixelBudget: 14000000,
+    mobilePixelRatio: 1.45,
+    mobilePixelBudget: 4000000
+  }
+});
+
+let graphicsQuality = 'high';
+try {
+  const savedGraphicsSettings = JSON.parse(localStorage.getItem('arena-zero-settings') || '{}');
+  if (savedGraphicsSettings && Object.prototype.hasOwnProperty.call(GRAPHICS_QUALITY_PRESETS, savedGraphicsSettings.graphicsQuality)) {
+    graphicsQuality = savedGraphicsSettings.graphicsQuality;
+  }
+} catch (_) {}
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070d18);
 scene.fog = new THREE.FogExp2(0x070d18, .0155);
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, .1, 150);
 camera.position.set(0, 12, 29);
 camera.lookAt(0, 1, 0);
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
-renderer.setSize(innerWidth, innerHeight);
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: false,
+  depth: true,
+  stencil: false,
+  powerPreference: 'high-performance',
+  preserveDrawingBuffer: false
+});
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.12;
 root.appendChild(renderer.domElement);
+
+let activeRenderPixelRatio = 0;
+function getGraphicsPixelRatio(width, height) {
+  const profile = GRAPHICS_QUALITY_PRESETS[graphicsQuality] || GRAPHICS_QUALITY_PRESETS.high;
+  const coarsePointer = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const compactDisplay = coarsePointer || Math.min(width, height) < 560;
+  const maxRatio = compactDisplay ? profile.mobilePixelRatio : profile.pixelRatio;
+  const pixelBudget = compactDisplay ? profile.mobilePixelBudget : profile.pixelBudget;
+  const budgetRatio = Math.sqrt(pixelBudget / Math.max(1, width * height));
+  return THREE.MathUtils.clamp(Math.min(maxRatio, budgetRatio), .5, maxRatio);
+}
+
+function resizeRenderer() {
+  const width = Math.max(1, Math.floor(root.clientWidth || window.innerWidth));
+  const height = Math.max(1, Math.floor(root.clientHeight || window.innerHeight));
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+
+  const nextPixelRatio = getGraphicsPixelRatio(width, height);
+  if (Math.abs(nextPixelRatio - activeRenderPixelRatio) > .005) {
+    renderer.setPixelRatio(nextPixelRatio);
+    activeRenderPixelRatio = nextPixelRatio;
+  }
+  renderer.setSize(width, height, false);
+
+  const qualityNote = $('graphics-quality-note');
+  if (qualityNote) {
+    qualityNote.textContent = GRAPHICS_QUALITY_PRESETS[graphicsQuality].label +
+      ' // ' + Math.round(activeRenderPixelRatio * 100) + '% RENDER SCALE';
+  }
+}
+
+resizeRenderer();
+window.addEventListener('resize', resizeRenderer, { passive: true });
+window.visualViewport?.addEventListener('resize', resizeRenderer, { passive: true });
+if (typeof ResizeObserver !== 'undefined') {
+  const gameResizeObserver = new ResizeObserver(resizeRenderer);
+  gameResizeObserver.observe(root);
+}
 
 const hemisphereLight = new THREE.HemisphereLight(0x9abfff, 0x101a27, 1.15);
 scene.add(hemisphereLight);
@@ -658,16 +746,21 @@ try {
   if (typeof saved.aimAssist === 'boolean') aimAssist = saved.aimAssist;
   if (typeof saved.autoFire === 'boolean') autoFire = saved.autoFire;
   if (Number.isFinite(saved.aimRange)) aimRange = THREE.MathUtils.clamp(saved.aimRange, 8, 36);
+  if (saved.graphicsQuality && Object.prototype.hasOwnProperty.call(GRAPHICS_QUALITY_PRESETS, saved.graphicsQuality)) {
+    graphicsQuality = saved.graphicsQuality;
+  }
 } catch (_) {}
 $('aim-toggle').checked = aimAssist;
 $('fire-toggle').checked = autoFire;
 $('aim-range').value = aimRange;
+$('graphics-quality').value = graphicsQuality;
+resizeRenderer();
 $('range-value').textContent = aimRange + 'm';
 $('best-kills').textContent = String(bestKills).padStart(3, '0');
 
 function saveSettings() {
   try {
-    localStorage.setItem('arena-zero-settings', JSON.stringify({ aimAssist, autoFire, aimRange }));
+    localStorage.setItem('arena-zero-settings', JSON.stringify({ aimAssist, autoFire, aimRange, graphicsQuality }));
   } catch (_) {}
 }
 function showToast(message) {
@@ -1217,6 +1310,17 @@ function start() {
 }
 $('aim-toggle').addEventListener('change', event => { aimAssist = event.target.checked; saveSettings(); });
 $('fire-toggle').addEventListener('change', event => { autoFire = event.target.checked; saveSettings(); });
+$('graphics-quality').addEventListener('change', event => {
+  const selectedQuality = event.target.value;
+  if (!Object.prototype.hasOwnProperty.call(GRAPHICS_QUALITY_PRESETS, selectedQuality)) {
+    event.target.value = graphicsQuality;
+    return;
+  }
+  graphicsQuality = selectedQuality;
+  resizeRenderer();
+  saveSettings();
+  showToast('GRAPHICS PROFILE // ' + GRAPHICS_QUALITY_PRESETS[graphicsQuality].label);
+});
 $('aim-range').addEventListener('input', event => {
   aimRange = Number(event.target.value);
   $('range-value').textContent = aimRange + 'm';
@@ -1273,11 +1377,7 @@ addEventListener('mousemove', event => {
     pitch = THREE.MathUtils.clamp(pitch - event.movementY * .0018, -.65, .35);
   }
 });
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+// Renderer size, camera projection and pixel ratio are updated together by resizeRenderer().
 document.addEventListener('pointerlockerror', () => {
   if (started && !gameOver) showToast('MOUSE LOOK UNAVAILABLE // CLICK THE ARENA TO RETRY');
 });

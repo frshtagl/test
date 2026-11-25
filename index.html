@@ -16,7 +16,7 @@
     <div class="vignette"></div>
     <div id="damage-flash" class="damage-flash"></div>
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // VISUAL BUILD 1.1</small></div></div>
+      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // VISUAL BUILD 1.2</small></div></div>
       <div class="wave-block"><small>SECTOR</small><strong id="wave">01</strong><span id="phase">STANDBY</span></div>
       <div class="top-right"><span class="live-dot"></span> SYSTEM ONLINE <span class="upgrade-counter">UPGRADES <b id="upgrade-count">00</b></span></div>
     </header>
@@ -67,6 +67,16 @@
           <span>MODE <b>ENDLESS PvE</b></span>
           <span>LOADOUT <b>3 WEAPONS</b></span>
           <span>THREATS <b>3 CLASSES</b></span>
+        </div>
+        <div class="graphics-quality-control">
+          <label for="graphics-quality">GRAPHICS QUALITY</label>
+          <select id="graphics-quality" aria-describedby="graphics-quality-note">
+            <option value="low">LOW // PERFORMANCE</option>
+            <option value="medium">MEDIUM // BALANCED</option>
+            <option value="high">HIGH // DETAIL</option>
+            <option value="ultra">ULTRA // MAXIMUM</option>
+          </select>
+          <small id="graphics-quality-note">HIGH // RENDER SCALE ADAPTS TO YOUR DISPLAY</small>
         </div>
         <button id="start-button" class="start-cta" type="button" aria-label="Deploy into Arena Zero and start a new PvE run">
           <span class="start-cta__copy"><strong>DEPLOY INTO ARENA</strong><small>INITIALIZE NEW RUN // PvE</small></span>
