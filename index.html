@@ -103,6 +103,8 @@
 
       function showBootError(error) {
         const detail = error && error.message ? error.message : String(error || 'Unknown initialization error');
+        document.getElementById('start-screen').classList.remove('hidden');
+        document.getElementById('end-screen').classList.add('hidden');
         errorBox.textContent = 'SIMULATION FAILED TO INITIALIZE — ' + detail;
         errorBox.classList.remove('hidden');
         startButton.querySelector('strong').textContent = 'RELOAD GAME';
