@@ -1,6 +1,6 @@
 # ARENA ZERO
 
-A first-person sci-fi PvE browser shooter built with Three.js. FPS Foundation 1.5 adds a camera-relative first-person controller with acceleration, stamina, jump, crouch, slide, ADS, recoil, viewmodel arms and a pause flow. The VTK static-asset pipeline generates and validates wall terminals, floor service hatches and a future tactical-cover module; static props load as compressed binary STL and receive shared Three.js materials. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. Visual Build 1.4 adds an opt-in render telemetry panel for frame cadence, draw calls, triangle count, geometry/texture counts and drawing-buffer resolution. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
+A first-person sci-fi PvE browser shooter built with Three.js. FPS Foundation 1.5 adds a camera-relative first-person controller with acceleration, stamina, jump, crouch, slide, ADS, recoil, viewmodel arms and a pause flow. The VTK static-asset pipeline generates wall terminals, floor service hatches and functional tactical barricades. Barricades use conservative collision proxies for movement, navigation and projectile occlusion, and remain playable through a procedural fallback if STL loading fails. Player and enemy fire can damage and destroy cover, opening new routes. Gameplay Build 0.5 adds a between-wave roguelite upgrade system with randomized module choices and stackable combat improvements. Visual Build 0.6–0.7 adds instanced industrial architecture and a refined lighting hierarchy. Visual Build 0.8 refines physically based material response across the arena, player, enemies and weapons, including a clear-coated player visor. Visual Build 0.9 adds layered player and enemy armor details. Visual Build 1.0 adds weapon-specific model details and optics. Visual Build 1.1 adds capsule-shaped energy projectiles, weapon-specific muzzle-flash cones, octahedral impact bursts and lightweight particle shards when enemies are eliminated. Visual Build 1.2 adds Low, Medium, High and Ultra rendering presets, resolution-aware pixel budgets, high-DPI supersampling limits and responsive renderer resizing. Visual Build 1.3 adds deterministic procedural concrete, brushed-metal and armor surface maps with mipmaps, anisotropic filtering, roughness variation and subtle normal detail. Visual Build 1.4 adds an opt-in render telemetry panel for frame cadence, draw calls, triangle count, geometry/texture counts and drawing-buffer resolution. It builds on the articulated sci-fi player, animated Scout, Gunner and Heavy robot classes, three-weapon combat and local persistence.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ The arena floor, industrial structures, player armor, weapons and enemy armor us
 
 ## VTK asset pipeline
 
-Static environment props are generated offline with Python VTK and validated for bounds, triangle count and boundary/non-manifold edges. The browser loads compressed binary STL into Three.js and applies shared PBR materials. The cover barricade source is intentionally not used as gameplay cover until enemy navigation and a separate collision proxy are implemented. See docs/FPS_MASTER_PROMPT.md and docs/VTK_ASSET_PIPELINE.md.
+Static environment props are generated offline with Python VTK and validated for bounds, triangle count and boundary/non-manifold edges. The browser loads compressed binary STL into Three.js and applies PBR materials. Up to four chest-high VTK barricades are placed around the arena centre with a procedural fallback and a separate rotated AABB proxy. Cover blocks movement, line of sight, hitscan and projectiles; it has health stages and can be destroyed to open routes. See docs/VTK_ASSET_PIPELINE.md.
 
 ## Graphics diagnostics
 
@@ -69,7 +69,7 @@ All classes use line-of-sight perception and last-known player position. They do
 
 ## Tactical AI
 
-Enemy navigation uses a deterministic A* grid built from the arena collision boxes. Routes are smoothed only when the segment clears inflated cover. Enemies replan when blocked and reverse their flank preference after repeated failed progress. Scout strikes and Heavy slams have visible wind-up warnings; leaving the marked range cancels the attack. Gunners reposition for line of sight and their projectiles remain blockable by cover. See docs/TACTICAL_AI.md.
+Enemy navigation uses a deterministic A* grid built from arena collision boxes, including live tactical barricades. Scouts and Heavies prefer visible flank destinations around occupied cover; Gunners seek a clear firing angle. Destroying a barricade removes its collider, rebuilds navigation and invalidates existing paths. Scout strikes and Heavy slams have visible wind-up warnings; leaving the marked range cancels the attack. See docs/TACTICAL_AI.md and docs/VTK_ASSET_PIPELINE.md.
 
 ## Persistence
 
@@ -93,8 +93,10 @@ After Pages is enabled, use Run workflow whenever you want to publish a new buil
 - src/gameplay/weapon-system.mjs — deterministic weapon state machine
 - src/gameplay/combat.mjs — renderer-independent ballistics and obstruction resolution
 - src/gameplay/tactical-ai.mjs — deterministic A* navigation and enemy attack state machine
+- src/gameplay/cover-system.mjs — barricade collision bounds and destructible health state machine
 - scripts/combat-test.mjs — deterministic spread and hitscan regression tests
-- scripts/tactical-ai-test.mjs — navigation, archetype spacing and attack regression tests
+- scripts/tactical-ai-test.mjs — navigation, archetype spacing, cover flanking and attack regression tests
+- scripts/cover-system-test.mjs — rotated collision proxy and destructible-cover regression tests
 - docs/COMBAT_SYSTEM.md — combat architecture and weapon tuning specification
 - docs/TACTICAL_AI.md — enemy perception, navigation and attack design
 - src/styles.css — interface and responsive styling
