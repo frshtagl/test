@@ -150,11 +150,15 @@
 - [ ] Add validated cover collision proxy with enemy navigation regression tests
 
 ## 1.7 — Weapon handling and hit registration
-- [ ] Weapon state machine: ready, firing, ADS, reload and swap
-- [ ] Reload/swap viewmodel animation and ammo reserve model
-- [ ] Weapon-specific recoil recovery and spread behavior
+- [x] Extract deterministic weapon state machine into a testable module
+- [x] Add per-weapon magazine and reserve ammunition
+- [x] Enforce frame-independent fire cadence
+- [x] Add timed weapon swaps and reload interruption
+- [x] Preserve partial magazines and transfer only available reserve rounds
+- [x] Integrate magazine upgrades and reserve-ammo HUD
+- [x] Add automated weapon-state tests
+- [ ] Reload/swap viewmodel animation and recoil recovery
 - [ ] Hitscan rifle/precision fire and deterministic shotgun pellet rays
-- [ ] Projectile profiles for energy weapons that need travel time
 - [ ] Cover-aware hit registration and impact feedback
 
 ## 1.8 — Enemy AI and tactical navigation

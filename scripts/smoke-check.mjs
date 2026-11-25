@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator, weaponModule] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
@@ -12,7 +12,8 @@ const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, 
   readFile('docs/GRAPHICS_AUDIT.md', 'utf8'),
   readFile('docs/FPS_MASTER_PROMPT.md', 'utf8'),
   readFile('docs/VTK_ASSET_PIPELINE.md', 'utf8'),
-  readFile('tools/vtk/generate_arena_assets.py', 'utf8')
+  readFile('tools/vtk/generate_arena_assets.py', 'utf8'),
+  readFile('src/gameplay/weapon-system.mjs', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -213,3 +214,8 @@ assert.match(readme, /block player movement and projectiles/);
 assert.match(workflow, /enablement: true/);
 
 console.log('ARENA ZERO smoke checks passed: ' + ids.length + ' unique HTML IDs, ' + referencedIds.length + ' DOM references, combat and cover regression checks passed.');
+
+assert.ok(js.includes("from './gameplay/weapon-system.mjs'"));
+assert.ok(weaponModule.includes('export function createWeaponSystem'));
+assert.ok(weaponModule.includes('export function stepWeaponSystem'));
+assert.ok(html.includes('class="ammo-reserve"'));
