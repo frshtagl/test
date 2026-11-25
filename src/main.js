@@ -382,6 +382,65 @@ let dashCooldown = 0, invuln = 0, spawnTimer = 0, spawnCooldown = 0;
 let toastTimer = 0, hitTimer = 0, damageFlashTimer = 0, target = null;
 let spawnQueue = 0, animationClock = 0;
 const enemies = [], shots = [], effects = [];
+let intermission = false, upgradesTaken = 0, upgradeChoices = [];
+let maxHealth = 100;
+const runModifiers = { damage: 1, fireRate: 1, reloadSpeed: 1, moveSpeed: 1, magazine: 1 };
+const upgradePool = [
+  { id: 'overclock', name: 'OVERCLOCKED CORE', tag: 'OFFENSIVE SYSTEM', description: '+18% weapon damage', apply: () => { runModifiers.damage *= 1.18; } },
+  { id: 'rapid-cycle', name: 'RAPID CYCLING', tag: 'WEAPON CONTROL', description: '+14% fire rate', apply: () => { runModifiers.fireRate *= 1.14; } },
+  { id: 'reinforced', name: 'REINFORCED PLATING', tag: 'SURVIVABILITY', description: '+25 maximum health and restore 25', apply: () => { maxHealth += 25; health = Math.min(maxHealth, health + 25); } },
+  { id: 'quick-mag', name: 'EXPANDED MAGAZINES', tag: 'AMMUNITION', description: '+18% magazine capacity and refill all weapons', apply: () => { runModifiers.magazine *= 1.18; for (const id of Object.keys(weapons)) magazines[id] = magazineSize(id); } },
+  { id: 'kinetic', name: 'KINETIC SERVOS', tag: 'MOBILITY', description: '+12% movement speed', apply: () => { runModifiers.moveSpeed *= 1.12; } },
+  { id: 'field-loader', name: 'FIELD LOADER', tag: 'RELOAD SYSTEM', description: '+20% reload speed and restore 10 health', apply: () => { runModifiers.reloadSpeed *= 1.2; health = Math.min(maxHealth, health + 10); } }
+];
+function magazineSize(id) {
+  return Math.ceil(weapons[id].mag * runModifiers.magazine);
+}
+function renderUpgradeChoices() {
+  const options = $('upgrade-options');
+  options.innerHTML = upgradeChoices.map((choice, index) =>
+    `<button class="upgrade-option" type="button" data-upgrade-index="${index}">
+      <span class="upgrade-option__index">0${index + 1} // SELECT</span>
+      <strong>${choice.name}</strong>
+      <span class="upgrade-option__description">${choice.description}</span>
+      <small>${choice.tag}</small>
+    </button>`
+  ).join('');
+  options.querySelectorAll('[data-upgrade-index]').forEach(button => {
+    button.addEventListener('click', () => chooseUpgrade(Number(button.dataset.upgradeIndex)));
+  });
+}
+function openUpgradeSelection() {
+  intermission = true;
+  document.exitPointerLock?.();
+  const available = [...upgradePool];
+  for (let i = available.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [available[i], available[j]] = [available[j], available[i]];
+  }
+  upgradeChoices = available.slice(0, 3);
+  $('upgrade-round').textContent = `WAVE ${String(wave).padStart(2, '0')} CLEARED // SELECT ONE MODULE`;
+  renderUpgradeChoices();
+  $('upgrade-screen').classList.remove('hidden');
+}
+function chooseUpgrade(index) {
+  const choice = upgradeChoices[index];
+  if (!intermission || !choice) return;
+  choice.apply();
+  upgradesTaken++;
+  intermission = false;
+  upgradeChoices = [];
+  $('upgrade-screen').classList.add('hidden');
+  wave++;
+  startWave();
+  updateHUD();
+  try {
+    const lockRequest = renderer.domElement.requestPointerLock?.();
+    if (lockRequest && typeof lockRequest.catch === 'function') {
+      lockRequest.catch(() => showToast('MOUSE LOOK UNAVAILABLE // CLICK THE ARENA TO RETRY'));
+    }
+  } catch (_) {}
+}
 try {
   const storedBest = Number(localStorage.getItem('arena-zero-best') || 0);
   bestKills = Number.isFinite(storedBest) && storedBest > 0 ? Math.floor(storedBest) : 0;
@@ -407,16 +466,17 @@ function showToast(message) {
   toastTimer = 2.3;
 }
 function updateAmmoHUD() {
-  const def = weapons[currentWeapon];
-  $('ammo').innerHTML = magazines[currentWeapon] + '<span> / ' + def.mag + '</span>';
+  const capacity = magazineSize(currentWeapon);
+  $('ammo').innerHTML = magazines[currentWeapon] + '<span> / ' + capacity + '</span>';
   $('reload-label').textContent = reloading ? 'RELOADING' : 'READY';
 }
 function updateHUD() {
   $('kills').textContent = String(kills).padStart(3, '0');
   $('wave').textContent = String(wave).padStart(2, '0');
   $('hostiles').textContent = String(enemies.length + spawnQueue).padStart(2, '0');
-  $('health-text').textContent = Math.ceil(health) + ' / 100';
-  $('health-bar').style.width = health + '%';
+  $('health-text').textContent = Math.ceil(health) + ' / ' + maxHealth;
+  $('health-bar').style.width = (health / maxHealth * 100) + '%';
+  $('upgrade-count').textContent = String(upgradesTaken).padStart(2, '0');
   $('threat').textContent = wave < 3 ? 'LOW' : wave < 6 ? 'ELEVATED' : 'CRITICAL';
   $('phase').textContent = started ? 'ACTIVE' : 'STANDBY';
   $('best-kills').textContent = String(Math.max(bestKills, kills)).padStart(3, '0');
@@ -608,6 +668,8 @@ function makeEnemy() {
   updateHUD();
 }
 function startWave() {
+  intermission = false;
+  $('upgrade-screen').classList.add('hidden');
   spawnQueue = Math.min(5 + wave * 2, 22);
   spawnCooldown = .15;
   showToast('WAVE ' + String(wave).padStart(2, '0') + ' // ' + spawnQueue + ' HOSTILES');
@@ -710,7 +772,8 @@ function nearestTarget() {
 }
 function shoot() {
   const def = weapons[currentWeapon];
-  if (magazines[currentWeapon] <= 0 || reloading || performance.now() - lastShot < def.rate) return;
+  const fireDelay = def.rate / runModifiers.fireRate;
+  if (magazines[currentWeapon] <= 0 || reloading || performance.now() - lastShot < fireDelay) return;
   lastShot = performance.now();
   magazines[currentWeapon]--;
   const origin = new THREE.Vector3();
@@ -730,16 +793,16 @@ function shoot() {
     direction.x += (Math.random() - .5) * def.spread;
     direction.y += (Math.random() - .5) * def.spread;
     direction.z += (Math.random() - .5) * def.spread;
-    projectile(origin, direction, false, def.damage, def.speed, currentWeapon === 'precision' ? 'violet' : currentWeapon === 'shotgun' ? 'orange' : 'cyan');
+    projectile(origin, direction, false, def.damage * runModifiers.damage, def.speed, currentWeapon === 'precision' ? 'violet' : currentWeapon === 'shotgun' ? 'orange' : 'cyan');
   }
   addBurst(origin, def.color, .09);
   updateAmmoHUD();
 }
 function reload() {
   const def = weapons[currentWeapon];
-  if (reloading || magazines[currentWeapon] === def.mag) return;
+  if (reloading || magazines[currentWeapon] === magazineSize(currentWeapon)) return;
   reloading = true;
-  reloadRemaining = def.reload / 1000;
+  reloadRemaining = def.reload / 1000 / runModifiers.reloadSpeed;
   updateAmmoHUD();
 }
 function damage(amount) {
@@ -796,12 +859,22 @@ function eliminateEnemy(enemy) {
 function start() {
   started = true;
   gameOver = false;
-  health = 100;
+  runModifiers.damage = 1;
+  runModifiers.fireRate = 1;
+  runModifiers.reloadSpeed = 1;
+  runModifiers.moveSpeed = 1;
+  runModifiers.magazine = 1;
+  maxHealth = 100;
+  health = maxHealth;
+  upgradesTaken = 0;
+  upgradeChoices = [];
+  intermission = false;
+  $('upgrade-screen').classList.add('hidden');
   kills = 0;
   wave = 1;
-  magazines.rifle = weapons.rifle.mag;
-  magazines.shotgun = weapons.shotgun.mag;
-  magazines.precision = weapons.precision.mag;
+  magazines.rifle = magazineSize('rifle');
+  magazines.shotgun = magazineSize('shotgun');
+  magazines.precision = magazineSize('precision');
   reloading = false;
   reloadRemaining = 0;
   spawnTimer = 0;
@@ -867,6 +940,12 @@ renderer.domElement.addEventListener('click', () => {
 renderer.domElement.addEventListener('pointerdown', event => { if (event.button === 0) keys.Mouse0 = true; });
 addEventListener('pointerup', event => { if (event.button === 0) keys.Mouse0 = false; });
 addEventListener('keydown', event => {
+  if (intermission) {
+    if (event.code === 'Digit1') chooseUpgrade(0);
+    else if (event.code === 'Digit2') chooseUpgrade(1);
+    else if (event.code === 'Digit3') chooseUpgrade(2);
+    return;
+  }
   keys[event.code] = true;
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
   if (event.repeat && ['KeyR', 'KeyT', 'KeyF', 'Digit1', 'Digit2', 'Digit3'].includes(event.code)) return;
@@ -920,14 +999,14 @@ document.addEventListener('pointerlockerror', () => {
 window.__ARENA_ZERO_REGISTER_START__?.(start);
 
 function tick(dt) {
-  if (!started || gameOver) return;
+  if (!started || gameOver || intermission) return;
   animationClock += dt;
   invuln = Math.max(0, invuln - dt);
   dashCooldown = Math.max(0, dashCooldown - dt);
   if (reloadRemaining > 0) {
     reloadRemaining -= dt;
     if (reloadRemaining <= 0) {
-      magazines[currentWeapon] = weapons[currentWeapon].mag;
+      magazines[currentWeapon] = magazineSize(currentWeapon);
       reloading = false;
       updateAmmoHUD();
     }
@@ -950,7 +1029,7 @@ function tick(dt) {
   const sprinting = playerMoving && !!keys.ShiftLeft;
   if (playerMoving) {
     movement.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    player.position.addScaledVector(movement, dt * (sprinting ? 10 : 6));
+    player.position.addScaledVector(movement, dt * (sprinting ? 10 : 6) * runModifiers.moveSpeed);
   }
   player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
@@ -1102,12 +1181,11 @@ function tick(dt) {
   }
   if (spawnQueue === 0 && enemies.length === 0) {
     spawnTimer += dt;
-    if (spawnTimer > 2.5) {
+    if (spawnTimer > 1.8) {
       spawnTimer = 0;
-      wave++;
-      startWave();
+      openUpgradeSelection();
     }
-  } else spawnTimer = 0;
+  } else if (!intermission) spawnTimer = 0;
   if (toastTimer > 0) {
     toastTimer -= dt;
     if (toastTimer <= 0) $('toast').classList.remove('show');
