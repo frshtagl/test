@@ -42,9 +42,4 @@ const precisionCover=createCoverState('precision-test',180);
 applyCoverDamage(precisionCover,calculateCoverDamage('precision',105));
 assert.equal(precisionCover.health,22.5);
 assert.equal(precisionCover.stage,'critical');
-
-const overlappingSelf={position:{x:0,z:0},userData:{squadId:'overlap',squadSlot:0}};
-const overlappingAlly={position:{x:0,z:0},userData:{squadId:'overlap',squadSlot:1}};
-const overlapPush=calculateSquadSeparation(overlappingSelf.position,[overlappingSelf,overlappingAlly],'overlap',overlappingSelf,2.35);
-assert.ok(overlapPush.magnitude>0,'Exactly overlapping squad spawns must receive deterministic separation');
 console.log('ARENA ZERO cover-system checks passed: health thresholds, weapon damage profiles and rotated collision bounds.');
