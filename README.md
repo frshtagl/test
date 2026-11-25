@@ -23,7 +23,7 @@ The project loads Three.js from a CDN, so an internet connection is required.
 - Space: dash
 - Esc: release the mouse
 
-Aim assist and auto-fire target the PvE bots in this project only. Auto-fire can still be used with aim assist disabled; in that mode shots follow the centre-screen camera ray.
+Aim assist and auto-fire target the PvE bots in this project only. Auto-fire can still be used with aim assist disabled; in that mode shots follow the centre-screen camera ray. Arena pillars and crates block player movement and projectiles, and the dash stops at cover.
 
 ## Weapons
 
