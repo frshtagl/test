@@ -169,7 +169,8 @@ let toastTimer = 0, hitTimer = 0, damageFlashTimer = 0, target = null;
 let spawnQueue = 0;
 const enemies = [], shots = [], effects = [];
 try {
-  bestKills = Number(localStorage.getItem('arena-zero-best') || 0);
+  const storedBest = Number(localStorage.getItem('arena-zero-best') || 0);
+  bestKills = Number.isFinite(storedBest) && storedBest > 0 ? Math.floor(storedBest) : 0;
   const saved = JSON.parse(localStorage.getItem('arena-zero-settings') || '{}');
   if (typeof saved.aimAssist === 'boolean') aimAssist = saved.aimAssist;
   if (typeof saved.autoFire === 'boolean') autoFire = saved.autoFire;
@@ -289,6 +290,13 @@ function closestPointOnSegment(point, start, end) {
   return start.clone().addScaledVector(segment, t);
 }
 
+function segmentParameter(point, start, end) {
+  const segment = end.clone().sub(start);
+  const lengthSq = segment.lengthSq();
+  if (lengthSq === 0) return 0;
+  return THREE.MathUtils.clamp(point.clone().sub(start).dot(segment) / lengthSq, 0, 1);
+}
+
 function segmentObstacleHit(start, end) {
   let nearest = null;
   let nearestT = Infinity;
@@ -318,7 +326,7 @@ function segmentObstacleHit(start, end) {
     }
     if (tMin <= tMax && tMin >= 0 && tMin < nearestT) {
       nearestT = tMin;
-      nearest = start.clone().lerp(end, tMin);
+      nearest = { point: start.clone().lerp(end, tMin), t: tMin };
     }
   }
   return nearest;
@@ -517,7 +525,17 @@ addEventListener('keydown', event => {
   if (event.code === 'Digit3') switchWeapon('precision');
   if (event.code === 'Space' && started && dashCooldown <= 0) {
     const direction = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-    player.position.addScaledVector(direction, 5);
+    const dashStart = player.position.clone();
+    const dashEnd = dashStart.clone().addScaledVector(direction, 5);
+    const dashImpact = segmentObstacleHit(
+      dashStart.clone().add(new THREE.Vector3(0, 1, 0)),
+      dashEnd.clone().add(new THREE.Vector3(0, 1, 0))
+    );
+    if (dashImpact) {
+      player.position.copy(dashStart.addScaledVector(direction, Math.max(0, 5 * dashImpact.t - .65)));
+    } else {
+      player.position.copy(dashEnd);
+    }
     resolveArenaCollisions(player.position, .55);
     player.position.x = THREE.MathUtils.clamp(player.position.x, -21, 21);
     player.position.z = THREE.MathUtils.clamp(player.position.z, -21, 21);
@@ -631,27 +649,42 @@ function tick(dt) {
     shot.life -= dt;
     let hit = false;
     const obstacleImpact = segmentObstacleHit(segmentStart, segmentEnd);
-    if (obstacleImpact) {
-      addBurst(obstacleImpact, 0x8ba6ba, .09);
-      hit = true;
-    } else if (!shot.hostile) {
-      for (let j = enemies.length - 1; j >= 0; j--) {
-        const enemy = enemies[j];
+    let firstImpactT = obstacleImpact ? obstacleImpact.t : Infinity;
+
+    if (!shot.hostile) {
+      let hitEnemy = null;
+      let hitPoint = null;
+      for (const enemy of enemies) {
         const center = enemy.position.clone().add(new THREE.Vector3(0, 1.1 * enemy.scale.y, 0));
         const closest = closestPointOnSegment(center, segmentStart, segmentEnd);
-        if (closest.distanceToSquared(center) < enemy.userData.radius * enemy.userData.radius) {
-          registerHit(closest, enemy, shot.damage);
-          hit = true;
-          break;
+        if (closest.distanceToSquared(center) >= enemy.userData.radius * enemy.userData.radius) continue;
+        const impactT = segmentParameter(closest, segmentStart, segmentEnd);
+        if (impactT < firstImpactT) {
+          firstImpactT = impactT;
+          hitEnemy = enemy;
+          hitPoint = closest;
         }
+      }
+      if (hitEnemy) {
+        registerHit(hitPoint, hitEnemy, shot.damage);
+        hit = true;
       }
     } else {
       const playerCenter = player.position.clone().add(new THREE.Vector3(0, 1, 0));
       const closest = closestPointOnSegment(playerCenter, segmentStart, segmentEnd);
       if (closest.distanceToSquared(playerCenter) < .8 * .8) {
-        damage(shot.damage);
-        hit = true;
+        const playerImpactT = segmentParameter(closest, segmentStart, segmentEnd);
+        if (playerImpactT < firstImpactT) {
+          damage(shot.damage);
+          hit = true;
+        }
       }
+    }
+
+    // A target hit wins only if it is closer along the segment than the cover.
+    if (!hit && obstacleImpact) {
+      addBurst(obstacleImpact.point, 0x8ba6ba, .09);
+      hit = true;
     }
     if (hit || shot.life <= 0 || shot.mesh.position.length() > 55) {
       scene.remove(shot.mesh);
