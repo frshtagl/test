@@ -95,7 +95,6 @@ const weapons = {
   shotgun: { name: 'BREACH-7', short: 'SHOTGUN', mag: 8, damage: 13, rate: 650, reload: 1550, pellets: 7, spread: .105, speed: 48, color: 0xffad62, description: '7-PELLET // CLOSE RANGE' },
   precision: { name: 'LONGSHOT', short: 'PRECISION', mag: 6, damage: 105, rate: 850, reload: 1700, pellets: 1, spread: .002, speed: 95, color: 0xb99aff, description: 'HIGH IMPACT // SLOW FIRE' }
 };
-const weaponOrder = ['rifle', 'shotgun', 'precision'];
 const magazines = { rifle: 30, shotgun: 8, precision: 6 };
 let currentWeapon = 'rifle';
 function buildWeaponVisual() {
@@ -116,7 +115,10 @@ function buildWeaponVisual() {
   updateAmmoHUD();
 }
 function switchWeapon(id) {
-  if (!weapons[id] || currentWeapon === id || reloading) return;
+  if (!weapons[id] || currentWeapon === id) return;
+  // Switching weapons cancels the current reload but preserves each magazine.
+  reloading = false;
+  reloadRemaining = 0;
   currentWeapon = id;
   buildWeaponVisual();
   showToast('LOADOUT // ' + weapons[id].name);
@@ -237,17 +239,41 @@ function projectile(from, direction, hostile, damageAmount, speed, color) {
   scene.add(mesh);
   shots.push({ mesh, dir: direction.clone().normalize(), speed, life: 2.2, hostile, damage: damageAmount });
 }
+
+// Return the nearest point on a movement segment. This prevents fast projectiles
+// from tunnelling through targets between rendered frames.
+function closestPointOnSegment(point, start, end) {
+  const segment = end.clone().sub(start);
+  const lengthSq = segment.lengthSq();
+  if (lengthSq === 0) return start.clone();
+  const t = THREE.MathUtils.clamp(point.clone().sub(start).dot(segment) / lengthSq, 0, 1);
+  return start.clone().addScaledVector(segment, t);
+}
+
+// Dispose geometries and (optionally) materials when transient objects are removed.
+function disposeObject3D(object, disposeMaterials = true) {
+  object.traverse(child => {
+    if (child.geometry) child.geometry.dispose();
+    if (disposeMaterials && child.material) {
+      if (Array.isArray(child.material)) child.material.forEach(material => material.dispose());
+      else child.material.dispose();
+    }
+  });
+}
+
 function nearestTarget() {
   let best = null;
   let bestScore = Infinity;
-  const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+  const cameraForward = camera.getWorldDirection(new THREE.Vector3());
   for (const enemy of enemies) {
-    const delta = new THREE.Vector3().subVectors(enemy.position, player.position);
-    const distance = delta.length();
-    if (distance > aimRange) continue;
-    const dot = forward.dot(delta.clone().normalize());
-    if (dot < .05) continue;
-    const score = distance + (1 - dot) * 8 + (enemy.userData.type === 'heavy' ? 1.2 : 0);
+    const aimPoint = enemy.position.clone().add(new THREE.Vector3(0, 1.25 * enemy.scale.y, 0));
+    const playerDistance = aimPoint.distanceTo(player.position);
+    if (playerDistance > aimRange) continue;
+    const cameraToTarget = aimPoint.clone().sub(camera.position);
+    const alignment = cameraForward.dot(cameraToTarget.normalize());
+    // Only acquire targets reasonably close to the centre of the screen.
+    if (alignment < .93) continue;
+    const score = playerDistance + (1 - alignment) * 18 + (enemy.userData.type === 'heavy' ? 1.2 : 0);
     if (score < bestScore) {
       bestScore = score;
       best = enemy;
@@ -264,9 +290,13 @@ function shoot() {
   muzzle.getWorldPosition(origin);
   let baseDirection;
   if (aimAssist && target) {
-    baseDirection = target.position.clone().add(new THREE.Vector3(0, 1.25 * target.scale.y, 0)).sub(origin).normalize();
+    const aimPoint = target.position.clone().add(new THREE.Vector3(0, 1.25 * target.scale.y, 0));
+    baseDirection = aimPoint.sub(origin).normalize();
   } else {
-    baseDirection = new THREE.Vector3(-Math.sin(yaw), Math.sin(-pitch), -Math.cos(yaw)).normalize();
+    // Fire through the centre-screen camera ray, not a separately guessed player angle.
+    const cameraForward = camera.getWorldDirection(new THREE.Vector3());
+    const crosshairPoint = camera.position.clone().addScaledVector(cameraForward, 80);
+    baseDirection = crosshairPoint.sub(origin).normalize();
   }
   for (let i = 0; i < def.pellets; i++) {
     const direction = baseDirection.clone();
@@ -312,20 +342,23 @@ function addBurst(position, color = 0x50e6f2, size = .2) {
   scene.add(mesh);
   effects.push({ mesh, life: .22, max: .22 });
 }
-function registerHit(position, enemy) {
-  enemy.userData.hp -= 1;
+function registerHit(position, enemy, damageAmount) {
+  enemy.userData.hp = Math.max(0, enemy.userData.hp - damageAmount);
   const ratio = THREE.MathUtils.clamp(enemy.userData.hp / enemy.userData.maxHp, 0, 1);
   enemy.userData.barFill.scale.x = Math.max(.001, ratio);
   enemy.userData.barFill.position.x = -.6 * (1 - ratio);
   addBurst(position, enemy.userData.type === 'gunner' ? 0xb99aff : 0xffa15a, .13);
   hitTimer = .12;
   $('hitmarker').classList.add('active');
+  if (enemy.userData.hp <= 0) eliminateEnemy(enemy);
 }
 function eliminateEnemy(enemy) {
   const index = enemies.indexOf(enemy);
   if (index < 0) return;
+  addBurst(enemy.position.clone().add(new THREE.Vector3(0, 1.1 * enemy.scale.y, 0)), 0xffa15a, .3);
   scene.remove(enemy);
   enemies.splice(index, 1);
+  disposeObject3D(enemy);
   kills += enemy.userData.points;
   bestKills = Math.max(bestKills, kills);
   try { localStorage.setItem('arena-zero-best', String(bestKills)); } catch (_) {}
@@ -343,11 +376,33 @@ function start() {
   reloading = false;
   reloadRemaining = 0;
   spawnTimer = 0;
-  for (const enemy of enemies) scene.remove(enemy);
+  spawnCooldown = 0;
+  spawnQueue = 0;
+  lastShot = 0;
+  dashCooldown = 0;
+  invuln = 0;
+  target = null;
+  keys = {};
+  toastTimer = 0;
+  hitTimer = 0;
+  damageFlashTimer = 0;
+  $('toast').classList.remove('show');
+  $('hitmarker').classList.remove('active');
+  $('lock-label').classList.remove('visible');
+  for (const enemy of enemies) {
+    scene.remove(enemy);
+    disposeObject3D(enemy);
+  }
   enemies.length = 0;
-  for (const shot of shots) scene.remove(shot.mesh);
+  for (const shot of shots) {
+    scene.remove(shot.mesh);
+    disposeObject3D(shot.mesh, false);
+  }
   shots.length = 0;
-  for (const effect of effects) scene.remove(effect.mesh);
+  for (const effect of effects) {
+    scene.remove(effect.mesh);
+    disposeObject3D(effect.mesh);
+  }
   effects.length = 0;
   player.position.set(0, 0, 8);
   yaw = 0;
@@ -378,6 +433,7 @@ addEventListener('pointerup', event => { if (event.button === 0) keys.Mouse0 = f
 addEventListener('keydown', event => {
   keys[event.code] = true;
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
+  if (event.repeat && ['KeyR', 'KeyT', 'KeyF', 'Digit1', 'Digit2', 'Digit3'].includes(event.code)) return;
   if (event.code === 'KeyR') reload();
   if (event.code === 'KeyT') $('aim-toggle').click();
   if (event.code === 'KeyF') $('fire-toggle').click();
@@ -393,6 +449,8 @@ addEventListener('keydown', event => {
   }
 });
 addEventListener('keyup', event => { keys[event.code] = false; });
+addEventListener('blur', () => { keys = {}; });
+addEventListener('pointercancel', () => { keys.Mouse0 = false; });
 addEventListener('mousemove', event => {
   if (document.pointerLockElement === renderer.domElement) {
     yaw -= event.movementX * .0022;
@@ -445,8 +503,9 @@ function tick(dt) {
   look.add(new THREE.Vector3(-Math.sin(yaw) * 8, pitch * 5, -Math.cos(yaw) * 8));
   camera.lookAt(look);
 
-  target = aimAssist ? nearestTarget() : null;
-  $('lock-label').classList.toggle('visible', !!target);
+  // Keep target acquisition available to auto-fire; aim assist only controls bullet magnetism.
+  target = nearestTarget();
+  $('lock-label').classList.toggle('visible', aimAssist && !!target);
   if (target) {
     const screen = new THREE.Vector3(target.position.x, target.position.y + 2.5 * target.scale.y, target.position.z).project(camera);
     $('lock-label').style.left = ((screen.x * .5 + .5) * innerWidth) + 'px';
@@ -460,7 +519,8 @@ function tick(dt) {
     const toPlayer = new THREE.Vector3().subVectors(player.position, enemy.position);
     const distance = toPlayer.length();
     const direction = toPlayer.clone().normalize();
-    enemy.rotation.y = Math.atan2(direction.x, direction.z);
+    // Enemy meshes face local -Z, so invert the direction when calculating yaw.
+    enemy.rotation.y = Math.atan2(-direction.x, -direction.z);
     data.cooldown -= dt;
     if (data.type === 'gunner') {
       if (distance > data.range + 2) enemy.position.addScaledVector(direction, data.speed * dt);
@@ -481,30 +541,33 @@ function tick(dt) {
 
   for (let i = shots.length - 1; i >= 0; i--) {
     const shot = shots[i];
-    shot.mesh.position.addScaledVector(shot.dir, shot.speed * dt);
+    const segmentStart = shot.mesh.position.clone();
+    const segmentEnd = segmentStart.clone().addScaledVector(shot.dir, shot.speed * dt);
+    shot.mesh.position.copy(segmentEnd);
     shot.life -= dt;
     let hit = false;
     if (!shot.hostile) {
       for (let j = enemies.length - 1; j >= 0; j--) {
         const enemy = enemies[j];
         const center = enemy.position.clone().add(new THREE.Vector3(0, 1.1 * enemy.scale.y, 0));
-        if (shot.mesh.position.distanceTo(center) < enemy.userData.radius) {
-          registerHit(shot.mesh.position, enemy);
-          enemy.userData.hp -= shot.damage;
-          const ratio = THREE.MathUtils.clamp(enemy.userData.hp / enemy.userData.maxHp, 0, 1);
-          enemy.userData.barFill.scale.x = Math.max(.001, ratio);
-          enemy.userData.barFill.position.x = -.6 * (1 - ratio);
-          if (enemy.userData.hp <= 0) eliminateEnemy(enemy);
+        const closest = closestPointOnSegment(center, segmentStart, segmentEnd);
+        if (closest.distanceToSquared(center) < enemy.userData.radius * enemy.userData.radius) {
+          registerHit(closest, enemy, shot.damage);
           hit = true;
           break;
         }
       }
-    } else if (shot.mesh.position.distanceTo(player.position.clone().add(new THREE.Vector3(0, 1, 0))) < .8) {
-      damage(shot.damage);
-      hit = true;
+    } else {
+      const playerCenter = player.position.clone().add(new THREE.Vector3(0, 1, 0));
+      const closest = closestPointOnSegment(playerCenter, segmentStart, segmentEnd);
+      if (closest.distanceToSquared(playerCenter) < .8 * .8) {
+        damage(shot.damage);
+        hit = true;
+      }
     }
     if (hit || shot.life <= 0 || shot.mesh.position.length() > 55) {
       scene.remove(shot.mesh);
+      disposeObject3D(shot.mesh, false);
       shots.splice(i, 1);
     }
   }
@@ -515,6 +578,7 @@ function tick(dt) {
     effect.mesh.material.opacity = Math.max(0, effect.life / effect.max);
     if (effect.life <= 0) {
       scene.remove(effect.mesh);
+      disposeObject3D(effect.mesh);
       effects.splice(i, 1);
     }
   }
