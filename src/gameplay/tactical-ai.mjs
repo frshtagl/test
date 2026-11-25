@@ -110,7 +110,8 @@ function ringGoal({type,position,target,grid,obstacles,strafeSign,squadRole}){
   const dx=position.x-target.x,dz=position.z-target.z,currentAngle=Math.atan2(dz,dx);
   const radius=type==='scout'?2.25:type==='heavy'?3.05:12.4;
   const roleOffset=squadRoleAngle(squadRole);
-  const preferred=currentAngle+(roleOffset===null?(type==='scout'?strafeSign*.95:type==='gunner'?strafeSign*.38:0):roleOffset);
+  const roleBias=roleOffset===null?(type==='scout'?strafeSign*.95:type==='gunner'?strafeSign*.38:0):roleOffset+strafeSign*(type==='scout'?.16:type==='gunner'?.12:.06);
+  const preferred=currentAngle+roleBias;
   let best=null,bestScore=Infinity;
   const samples=type==='gunner'?24:16;
   for(let i=0;i<samples;i++){
@@ -124,10 +125,10 @@ function ringGoal({type,position,target,grid,obstacles,strafeSign,squadRole}){
   if(best)return best;
   return{x:clamp(target.x+Math.cos(currentAngle)*radius,grid.min,grid.max),z:clamp(target.z+Math.sin(currentAngle)*radius,grid.min,grid.max)};
 }
-function chooseGunnerPeekGoal(position,target,grid,obstacles,squadRole){
+function chooseGunnerPeekGoal(position,target,grid,obstacles,squadRole,strafeSign){
   if(hasLineOfSight2D(position,target,obstacles,.06))return null;
   const roleOffset=squadRoleAngle(squadRole);
-  const preferredAngle=Math.atan2(position.z-target.z,position.x-target.x)+(roleOffset===null?0:roleOffset);
+  const preferredAngle=Math.atan2(position.z-target.z,position.x-target.x)+(roleOffset===null?strafeSign*.38:roleOffset+strafeSign*.12);
   let best=null,bestScore=Infinity;
   for(const obstacle of obstacles){
     if(!obstacle.cover)continue;
@@ -155,7 +156,7 @@ function chooseGunnerPeekGoal(position,target,grid,obstacles,squadRole){
 }
 export function chooseTacticalGoal({type,position,target,grid,obstacles=grid.obstacles,strafeSign=1,squadRole=null}){
   if(type==='gunner'){
-    const peek=chooseGunnerPeekGoal(position,target,grid,obstacles,squadRole);
+    const peek=chooseGunnerPeekGoal(position,target,grid,obstacles,squadRole,strafeSign);
     if(peek)return peek;
   }
   if(type==='scout'||type==='heavy'||type==='gunner')return ringGoal({type,position,target,grid,obstacles,strafeSign,squadRole});
