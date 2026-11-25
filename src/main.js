@@ -1163,6 +1163,7 @@ function renderUpgradeChoices() {
 }
 function openUpgradeSelection() {
   intermission = true;
+  clearThreatIndicator();
   document.exitPointerLock?.();
   const available = [...upgradePool];
   for (let i = available.length - 1; i > 0; i--) {
@@ -1693,6 +1694,12 @@ function shoot() {
 function reload() {
   if(beginWeaponReload(weaponSystem,currentWeapon,magazineSize(currentWeapon),runModifiers.reloadSpeed))updateAmmoHUD();
 }
+function clearThreatIndicator() {
+  threatIndicatorTimer = 0;
+  const indicator = $('threat-indicator');
+  indicator.classList.remove('active', 'critical');
+  indicator.removeAttribute('aria-label');
+}
 function updateThreatIndicator(dt) {
   const threats = [];
   for (const shot of shots) {
@@ -1755,6 +1762,7 @@ function damage(amount) {
     $('final-kills').textContent = kills;
     $('final-wave').textContent = wave;
     $('end-screen').classList.remove('hidden');
+    clearThreatIndicator();
     updateHUD();
   }
 }
@@ -1883,7 +1891,7 @@ function start() {
   enemySequence = 0;
   waveSpawnSequence = 0;
   threatIndicatorTimer = 0;
-  $('threat-indicator').classList.remove('active', 'critical');
+  clearThreatIndicator();
   for (const shot of shots) {
     scene.remove(shot.mesh);
     disposeObject3D(shot.mesh, false);
@@ -2044,6 +2052,7 @@ window.__ARENA_ZERO_REGISTER_START__?.(start);
 function pauseGame() {
   if (paused || !started || gameOver || intermission) return;
   paused = true;
+  clearThreatIndicator();
   keys = {};
   jumpPressed = false;
   slidePressed = false;
