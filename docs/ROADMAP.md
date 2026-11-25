@@ -109,12 +109,21 @@
 - [x] Persist graphics quality alongside existing local settings
 - [ ] Browser visual comparison and per-tier frame-time measurements
 
-## 1.3 — Animation and camera polish
+## 1.3 — Procedural textures and surface detail
+- [x] Generate deterministic concrete, brushed-metal and armor color maps
+- [x] Generate corresponding tangent-space normal maps
+- [x] Generate roughness maps with controlled micro-variation
+- [x] Configure repeat wrapping, mipmaps and supported anisotropic filtering
+- [x] Apply shared surface maps to floor, walls, architecture, player, enemies and weapons
+- [ ] Browser inspection for texture scale, seams and material balance
+- [ ] Texture memory and startup-time profiling
+
+## 1.4 — Animation and camera polish
 - [ ] Player weapon handling and reload animation refinement
 - [ ] Enemy attack and death animation refinement
 - [ ] Third-person camera collision and response review
 
-## 1.4 — Performance and visual QA
+## 1.5 — Performance and visual QA
 - [ ] Before/after browser screenshots
 - [ ] Desktop and mobile visual review
 - [ ] FPS, frame-time and draw-call measurements
