@@ -196,8 +196,9 @@
 - [x] Remove destroyed cover from collision and rebuild the A* grid
 - [x] Invalidate active enemy paths after the cover layout changes
 - [x] Add regression tests for cover health, proxy bounds and enemy flanking
+- [x] Add a 22-enemy / 14-obstacle pathfinding stress benchmark with p50/p95 reporting
 - [ ] Browser playtest of cover placement, collision feel, destruction and flanking behavior
-- [ ] Measure pathfinding and frame-time cost during full enemy waves
+- [ ] Profile actual browser frame time during full enemy waves
 - [ ] Spatial weapon/enemy audio and combat telegraphs
 - [ ] Reduced-motion option and control remapping
 - [ ] Additional arena layouts, hazards and deterministic wave composition
