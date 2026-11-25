@@ -245,6 +245,9 @@ assert.ok(js.includes('const coverPlacements = selectCoverPlacements()'), 'Tacti
 assert.ok(js.includes('function createFallbackCoverVisual()'), 'Cover fallback geometry is missing');
 assert.ok(js.includes('function rebuildEnemyNavigationGrid()'), 'Dynamic navigation rebuild is missing');
 assert.ok(js.includes('function damageCover('), 'Cover damage integration is missing');
+assert.ok(js.includes('const playerExposureHeight = THREE.MathUtils.lerp(1.55, .82, motion.crouchBlend)'), 'Crouching must lower player exposure behind cover');
+assert.ok(js.includes('const sightTarget = player.position.clone().add(new THREE.Vector3(0, playerExposureHeight, 0))'), 'Enemy perception must use the crouch-aware exposure point');
+assert.ok(js.includes('const playerCenter = player.position.clone().add(new THREE.Vector3(0, playerExposureHeight, 0))'), 'Enemy projectile collision must use the crouch-aware exposure point');
 assert.ok(js.includes('if(obstacle?.cover)damageCover'), 'Hitscan must damage destructible cover');
 assert.ok(js.includes('obstacleImpact.obstacle?.cover'), 'Hostile projectiles must damage destructible cover');
 assert.ok(js.includes('VTK cover unavailable; functional procedural cover remains active'), 'VTK load failure must preserve playable cover');
