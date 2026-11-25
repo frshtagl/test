@@ -2,7 +2,7 @@ const SECTORS=['FRONT','FRONT-RIGHT','RIGHT','REAR-RIGHT','REAR','REAR-LEFT','LE
 const TAU=Math.PI*2;
 function normalizeAngle(angle){return((angle+Math.PI)%(TAU)+TAU)%TAU-Math.PI;}
 export function getThreatDirection(player,yaw,source){
-  const dx=Number(source?.x)-Number(player?.x),dz=Number(source?.z)-Number(player?.z),heading=Number(yaw||0);
+  const dx=Number(source?.x)-Number(player?.x),dz=Number(source?.z)-Number(player?.z),heading=Number(yaw??0);
   if(!Number.isFinite(dx)||!Number.isFinite(dz)||!Number.isFinite(heading)||Math.hypot(dx,dz)<1e-6)return null;
   const angle=normalizeAngle(Math.atan2(dx,-dz)+heading);
   const sectorIndex=(Math.round(angle/(Math.PI/4))+8)%8;
