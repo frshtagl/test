@@ -97,6 +97,7 @@ After Pages is enabled, use Run workflow whenever you want to publish a new buil
 - scripts/combat-test.mjs — deterministic spread and hitscan regression tests
 - scripts/tactical-ai-test.mjs — navigation, archetype spacing, cover flanking and attack regression tests
 - scripts/cover-system-test.mjs — rotated collision proxy and destructible-cover regression tests
+- scripts/tactical-ai-benchmark.mjs — 22-enemy cover-aware pathfinding stress benchmark
 - docs/COMBAT_SYSTEM.md — combat architecture and weapon tuning specification
 - docs/TACTICAL_AI.md — enemy perception, navigation and attack design
 - src/styles.css — interface and responsive styling
