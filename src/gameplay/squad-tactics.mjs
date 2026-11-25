@@ -14,9 +14,14 @@ export function calculateSquadSeparation(position,allies,squadId,self=null,minDi
   let x=0,z=0;
   for(const ally of allies||[]){
     if(ally===self||ally?.userData?.squadId!==squadId||!ally.position)continue;
-    const dx=px-ally.position.x,dz=pz-ally.position.z,distance=Math.hypot(dx,dz);
+    let dx=px-ally.position.x,dz=pz-ally.position.z,distance=Math.hypot(dx,dz);
     if(distance>=radius)continue;
-    if(distance<1e-6)continue;
+    if(distance<1e-6){
+      const selfSlot=Number(self?.userData?.squadSlot)||0;
+      const allySlot=Number(ally?.userData?.squadSlot)||1;
+      const angle=((selfSlot-allySlot+8)%8)*Math.PI/4;
+      dx=Math.cos(angle);dz=Math.sin(angle);distance=1;
+    }
     const weight=(radius-distance)/radius;
     x+=(dx/distance)*weight;z+=(dz/distance)*weight;
   }
