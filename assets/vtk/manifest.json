@@ -6,27 +6,81 @@
   "export": "binary STL; PBR materials and collision proxies are authored in Three.js",
   "assets": {
     "cover_barricade": {
-      "file": "cover_barricade.stl.gz", "format": "gzip-compressed-binary-stl",
-      "raw_bytes": 13684, "compressed_bytes": 2361, "units": "metres",
-      "bounds": [-1.5, 1.5, -0.0000000035762786065873797, 1.3566431999206543, -0.44999998807907104, 0.7450000047683716],
-      "dimensions": [3.0, 1.35664, 1.195], "vertices": 160, "triangles": 272,
-      "boundary_or_nonmanifold_edges": 0, "collision_proxy_in_game": false, "collision_proxy_required": true,
-      "notes": "Chest-high modular cover; Three.js owns the PBR material and collision proxy."
+      "file": "cover_barricade.stl.gz",
+      "format": "gzip-compressed-binary-stl",
+      "raw_bytes": 13684,
+      "compressed_bytes": 2361,
+      "units": "metres",
+      "bounds": [
+        -1.5,
+        1.5,
+        -3.5762786065873797e-9,
+        1.3566431999206543,
+        -0.44999998807907104,
+        0.7450000047683716
+      ],
+      "dimensions": [
+        3,
+        1.35664,
+        1.195
+      ],
+      "vertices": 160,
+      "triangles": 272,
+      "boundary_or_nonmanifold_edges": 0,
+      "collision_proxy_in_game": true,
+      "collision_proxy_required": true,
+      "notes": "Chest-high tactical cover. Runtime Three.js uses a conservative, rotated AABB collision proxy for movement, navigation and projectile occlusion; the proxy is removed when the barricade is destroyed. A procedural visual fallback preserves gameplay if STL loading fails."
     },
     "wall_terminal": {
-      "file": "wall_terminal.stl.gz", "format": "gzip-compressed-binary-stl",
-      "raw_bytes": 7284, "compressed_bytes": 1198, "units": "metres",
-      "bounds": [-0.4650000035762787, 0.4650000035762787, -0.6399999856948853, 0.6399999856948853, -0.23999999463558197, 0.09000000357627869],
-      "dimensions": [0.93, 1.28, 0.33], "vertices": 96, "triangles": 144,
-      "boundary_or_nonmanifold_edges": 0, "collision_proxy_in_game": false, "collision_proxy_required": false,
+      "file": "wall_terminal.stl.gz",
+      "format": "gzip-compressed-binary-stl",
+      "raw_bytes": 7284,
+      "compressed_bytes": 1198,
+      "units": "metres",
+      "bounds": [
+        -0.4650000035762787,
+        0.4650000035762787,
+        -0.6399999856948853,
+        0.6399999856948853,
+        -0.23999999463558197,
+        0.09000000357627869
+      ],
+      "dimensions": [
+        0.93,
+        1.28,
+        0.33
+      ],
+      "vertices": 96,
+      "triangles": 144,
+      "boundary_or_nonmanifold_edges": 0,
+      "collision_proxy_in_game": false,
+      "collision_proxy_required": false,
       "notes": "Wall-mounted maintenance console; local front faces -Z; visual-only static prop."
     },
     "floor_service_hatch": {
-      "file": "floor_service_hatch.stl.gz", "format": "gzip-compressed-binary-stl",
-      "raw_bytes": 4884, "compressed_bytes": 829, "units": "metres",
-      "bounds": [-0.7749999761581421, 0.7749999761581421, 0.0000000013411045607369942, 0.20250000059604645, -0.7749999761581421, 0.7749999761581421],
-      "dimensions": [1.55, 0.2025, 1.55], "vertices": 64, "triangles": 96,
-      "boundary_or_nonmanifold_edges": 0, "collision_proxy_in_game": false, "collision_proxy_required": false,
+      "file": "floor_service_hatch.stl.gz",
+      "format": "gzip-compressed-binary-stl",
+      "raw_bytes": 4884,
+      "compressed_bytes": 829,
+      "units": "metres",
+      "bounds": [
+        -0.7749999761581421,
+        0.7749999761581421,
+        1.3411045607369942e-9,
+        0.20250000059604645,
+        -0.7749999761581421,
+        0.7749999761581421
+      ],
+      "dimensions": [
+        1.55,
+        0.2025,
+        1.55
+      ],
+      "vertices": 64,
+      "triangles": 96,
+      "boundary_or_nonmanifold_edges": 0,
+      "collision_proxy_in_game": false,
+      "collision_proxy_required": false,
       "notes": "Flush industrial service hatch; local origin at floor level; visual-only static prop."
     }
   }

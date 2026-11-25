@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator, weaponModule, combatModule, combatDoc] = await Promise.all([
+const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, fpsPrompt, vtkDoc, vtkGenerator, weaponModule, combatModule, combatDoc, coverModule, coverTest, tacticalModule, tacticalTest, vtkManifest] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('src/main.js', 'utf8'),
   readFile('src/styles.css', 'utf8'),
@@ -15,7 +15,12 @@ const [html, js, css, readme, workflow, graphicsPrompt, roadmap, graphicsAudit, 
   readFile('tools/vtk/generate_arena_assets.py', 'utf8'),
   readFile('src/gameplay/weapon-system.mjs', 'utf8'),
   readFile('src/gameplay/combat.mjs', 'utf8'),
-  readFile('docs/COMBAT_SYSTEM.md', 'utf8')
+  readFile('docs/COMBAT_SYSTEM.md', 'utf8'),
+  readFile('src/gameplay/cover-system.mjs', 'utf8'),
+  readFile('scripts/cover-system-test.mjs', 'utf8'),
+  readFile('src/gameplay/tactical-ai.mjs', 'utf8'),
+  readFile('scripts/tactical-ai-test.mjs', 'utf8'),
+  readFile('assets/vtk/manifest.json', 'utf8')
 ]);
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
@@ -228,9 +233,33 @@ assert.match(readme, /centre-screen camera ray/);
 assert.match(readme, /block player movement and projectiles/);
 assert.match(workflow, /enablement: true/);
 
-console.log('ARENA ZERO smoke checks passed: ' + ids.length + ' unique HTML IDs, ' + referencedIds.length + ' DOM references, combat and cover regression checks passed.');
+
 
 assert.ok(js.includes("from './gameplay/weapon-system.mjs'"));
 assert.ok(weaponModule.includes('export function createWeaponSystem'));
 assert.ok(weaponModule.includes('export function stepWeaponSystem'));
 assert.ok(html.includes('class="ammo-reserve"'));
+
+assert.ok(js.includes("from './gameplay/cover-system.mjs'"), 'Destructible cover module import is missing');
+assert.ok(js.includes('const coverPlacements = selectCoverPlacements()'), 'Tactical cover placement is missing');
+assert.ok(js.includes('function createFallbackCoverVisual()'), 'Cover fallback geometry is missing');
+assert.ok(js.includes('function rebuildEnemyNavigationGrid()'), 'Dynamic navigation rebuild is missing');
+assert.ok(js.includes('function damageCover('), 'Cover damage integration is missing');
+assert.ok(js.includes('const playerExposureHeight = THREE.MathUtils.lerp(1.55, .82, motion.crouchBlend)'), 'Crouching must lower player exposure behind cover');
+assert.ok(js.includes('const sightTarget = player.position.clone().add(new THREE.Vector3(0, playerExposureHeight, 0))'), 'Enemy perception must use the crouch-aware exposure point');
+assert.ok(js.includes('const playerCenter = player.position.clone().add(new THREE.Vector3(0, playerExposureHeight, 0))'), 'Enemy projectile collision must use the crouch-aware exposure point');
+assert.ok(js.includes('if(obstacle?.cover)damageCover'), 'Hitscan must damage destructible cover');
+assert.ok(js.includes('obstacleImpact.obstacle?.cover'), 'Hostile projectiles must damage destructible cover');
+assert.ok(js.includes('VTK cover unavailable; functional procedural cover remains active'), 'VTK load failure must preserve playable cover');
+assert.ok(coverModule.includes('export function createCoverCollider'), 'Cover collision proxy helper is missing');
+assert.ok(coverModule.includes('export function applyCoverDamage'), 'Cover health state machine is missing');
+assert.ok(coverTest.includes('cover-system checks passed'), 'Cover regression suite is missing');
+assert.ok(tacticalModule.includes("type==='scout'?22:14"), 'Scout and Heavy must prioritize visible flank angles');
+assert.ok(tacticalModule.includes('function chooseGunnerPeekGoal'), 'Gunner cover-edge peek selection is missing');
+assert.ok(tacticalTest.includes('Scout must route around the barricade end'), 'Cover flanking regression test is missing');
+assert.ok(tacticalTest.includes('Gunner should peek around a cover edge'), 'Gunner cover-peek regression test is missing');
+assert.match(vtkManifest, /"collision_proxy_in_game": true/);
+assert.match(vtkDoc, /procedural fallback remains active/);
+assert.ok(readme.includes('destructible tactical cover'), 'README must describe functional cover');
+
+console.log('ARENA ZERO smoke checks passed: ' + ids.length + ' unique HTML IDs, ' + referencedIds.length + ' DOM references, combat, tactical AI and destructible-cover integration validated.');

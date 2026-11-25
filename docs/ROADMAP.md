@@ -145,9 +145,10 @@
 - [x] Mesh validation for empty geometry and boundary/non-manifold edges
 - [x] Browser STL parser with malformed-file guards
 - [x] Load wall terminals and floor hatches as visual-only arena props
-- [x] Keep tactical cover out of combat until navigation and a separate collider are ready
-- [ ] Inspect generated props in a browser screenshot and adjust scale/material balance
-- [ ] Add validated cover collision proxy with enemy navigation regression tests
+- [x] Centre the barricade render geometry against its collision proxy
+- [x] Keep a procedural cover fallback active while the VTK mesh loads or if loading fails
+- [x] Add a conservative rotated AABB collision proxy separate from render geometry
+- [ ] Browser inspection of generated props, cover scale and material balance
 
 ## 1.7 — Weapon handling and hit registration
 - [x] Extract deterministic weapon state machine into a testable module
@@ -181,10 +182,23 @@
 - [x] Scout flanking, Gunner visible firing-position selection and Heavy close-range pressure
 - [x] Visible Scout strike and Heavy slam telegraphs with dodge/cancel windows
 - [x] Automated tests for path routing, cover clearance, archetype spacing and attack timing
+- [x] Prefer visible flank destinations when Scouts and Heavies lose sight behind cover
+- [x] Gunner firing-position selection around line-of-sight obstructions
 - [ ] Browser playtest and tune enemy spacing, telegraph timing and navigation around random crate layouts
-- [ ] Integrate the VTK cover barricade with a validated collision/navigation proxy
 
-## 2.0 — Audio, accessibility and encounter design
+## 2.0 — Functional tactical cover and destructible environment
+- [x] Place up to four VTK barricades in free positions around the arena centre
+- [x] Prevent barricade overlap with procedural crates and structural pillars
+- [x] Add immediate procedural fallback geometry and collision while the VTK mesh loads
+- [x] Use a separate rotated AABB proxy for player/enemy movement, line of sight, hitscan and projectiles
+- [x] Add intact, damaged, critical and destroyed cover health states
+- [x] Let player hitscan and hostile projectiles damage barricades
+- [x] Remove destroyed cover from collision and rebuild the A* grid
+- [x] Invalidate active enemy paths after the cover layout changes
+- [x] Add regression tests for cover health, proxy bounds and enemy flanking
+- [x] Add a 22-enemy / 14-obstacle pathfinding stress benchmark with p50/p95 reporting
+- [ ] Browser playtest of cover placement, collision feel, destruction and flanking behavior
+- [ ] Profile actual browser frame time during full enemy waves
 - [ ] Spatial weapon/enemy audio and combat telegraphs
 - [ ] Reduced-motion option and control remapping
 - [ ] Additional arena layouts, hazards and deterministic wave composition
