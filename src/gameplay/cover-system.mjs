@@ -18,3 +18,16 @@ export function applyCoverDamage(state,amount){
   state.stage=state.destroyed?'destroyed':state.ratio<=.2?'critical':state.ratio<=.65?'damaged':'intact';
   return{applied:true,damage:previousHealth-state.health,health:state.health,ratio:state.ratio,stage:state.stage,previousStage,destroyed:state.destroyed};
 }
+
+export function createCoverCollider(id,x,z,rotation=0){
+  if(typeof id!=='string'||!id.trim())throw new TypeError('Cover collider id must be a non-empty string.');
+  const px=Number(x),pz=Number(z),angle=Number(rotation);
+  if(!Number.isFinite(px)||!Number.isFinite(pz)||!Number.isFinite(angle))throw new TypeError('Cover collider transform must be finite.');
+  const cosine=Math.abs(Math.cos(angle)),sine=Math.abs(Math.sin(angle));
+  return{
+    id,x:px,z:pz,
+    halfX:cosine*1.5+sine*.5975+.04,
+    halfZ:sine*1.5+cosine*.5975+.04,
+    centerY:.6783,halfY:.6783,material:'composite'
+  };
+}
