@@ -29,5 +29,7 @@ jobs:
         run: node scripts/tactical-ai-test.mjs
       - name: Test destructible cover and collision proxies
         run: node scripts/cover-system-test.mjs
+      - name: Benchmark 22-enemy cover-aware pathfinding
+        run: node scripts/tactical-ai-benchmark.mjs
       - name: Validate generated VTK meshes
         run: node scripts/vtk-asset-test.mjs
