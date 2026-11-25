@@ -41,6 +41,12 @@ assert.ok(js.includes('function buildArenaArchitectureDetails()'), 'Arena archit
 assert.ok(js.includes('buildArenaArchitectureDetails();'), 'Arena architecture detail pass is not initialized');
 assert.ok(js.includes('new THREE.InstancedMesh(architectureUnitBox'), 'Repeated architecture details must use instancing');
 assert.ok(js.includes('batch.computeBoundingSphere();'), 'Instanced architecture bounds must be computed');
+assert.ok(js.includes('const frontFillLight = new THREE.DirectionalLight'), 'Front fill light is missing');
+assert.ok(js.includes('const perimeterAccentLight = new THREE.PointLight'), 'Perimeter accent light is missing');
+assert.ok(js.includes('keyLight.shadow.camera.updateProjectionMatrix();'), 'Updated shadow camera projection is missing');
+assert.ok(js.includes('keyLight.shadow.mapSize.set(1536, 1536)'), 'Shadow-map budget must remain explicitly bounded');
+assert.ok(js.includes('perimeterAccentLight.intensity = 7 +'), 'Perimeter light pulse is missing');
+assert.match(readme, /Visual Build 0\.6–0\.7/);
 assert.match(readme, /Visual Build 0\.6/);
 assert.match(graphicsPrompt, /## 12\. Ordered upgrade sequence/);
 assert.match(graphicsPrompt, /Inspect\. Plan\. Implement one subsystem/);
