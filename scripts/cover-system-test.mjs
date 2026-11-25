@@ -25,7 +25,7 @@ assert.ok(Math.abs(diagonal.halfX-diagonal.halfZ)<1e-9);
 assert.throws(()=>createCoverCollider('',0,0,0),/non-empty/);
 assert.throws(()=>createCoverCollider('bad',NaN,0,0),/finite/);
 assert.equal(calculateCoverDamage('rifle',29),21.75);
-assert.equal(calculateCoverDamage('shotgun',13),7.54);
+assert.ok(Math.abs(calculateCoverDamage('shotgun',13)-7.54)<1e-9);
 assert.equal(calculateCoverDamage('precision',105),157.5);
 assert.equal(calculateCoverDamage('hostile',8),8.4);
 assert.equal(calculateCoverDamage('precision',105,1.2),189);
