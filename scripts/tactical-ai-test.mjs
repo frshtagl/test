@@ -8,7 +8,7 @@ let previous={x:-8,z:0};
 for(const point of path){assert.ok(isWalkablePosition(grid,point));assert.ok(isSegmentClear2D(previous,point,obstacles,.36));previous=point;}
 assert.ok(Math.hypot(previous.x-8,previous.z)<1.1);
 assert.deepEqual(findNavigationPath(grid,{x:-8,z:0},{x:8,z:0}),path);
-const flankWall=[{x:0,z:0,halfX:1.5,halfZ:6}];
+const flankWall=[{id:'test-barricade',x:0,z:0,halfX:1.5,halfZ:6,cover:{id:'test-barricade'}}];
 const flankGrid=createNavigationGrid(flankWall,{min:-12,max:12,cellSize:1,clearance:.4});
 const flankTarget={x:-8,z:0},flankEnemy={x:8,z:0};
 const scoutFlank=chooseTacticalGoal({type:'scout',position:flankEnemy,target:flankTarget,grid:flankGrid,obstacles:flankWall});
@@ -17,6 +17,7 @@ const flankPath=findNavigationPath(flankGrid,flankEnemy,scoutFlank);
 assert.ok(flankPath.some(point=>Math.abs(point.z)>6.3),'Scout must route around the barricade end to regain sight');
 const gunnerFlank=chooseTacticalGoal({type:'gunner',position:flankEnemy,target:flankTarget,grid:flankGrid,obstacles:flankWall});
 assert.ok(hasLineOfSight2D(gunnerFlank,flankTarget,flankWall,.06),'Gunner must seek a clear firing angle');
+assert.ok(gunnerFlank.x>0&&Math.abs(gunnerFlank.z)>6.4,'Gunner should peek around a cover edge while staying on its side of the barricade');
 const open=createNavigationGrid([],{min:-20,max:20,cellSize:1});
 const target={x:0,z:0},enemy={x:0,z:16};
 const radii=['scout','heavy','gunner'].map(type=>{const p=chooseTacticalGoal({type,position:enemy,target,grid:open,obstacles:[]});return Math.hypot(p.x,p.z);});
