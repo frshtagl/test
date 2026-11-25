@@ -3,7 +3,7 @@ import { createFpsControllerState, resetFpsControllerState, stepFpsController } 
 import {createWeaponSystem,canFireWeapon,consumeWeaponRound,beginWeaponReload,cancelWeaponReload,requestWeaponSwap,stepWeaponSystem,setWeaponCapacity,resetWeaponSystem} from './gameplay/weapon-system.mjs';
 import {generatePelletDirections,resolveHitscan} from './gameplay/combat.mjs';
 import {createNavigationGrid,createTacticalBrain,stepTacticalBrain,updateTacticalPath} from './gameplay/tactical-ai.mjs';
-import {createCoverState,applyCoverDamage} from './gameplay/cover-system.mjs';
+import {createCoverState,applyCoverDamage,createCoverCollider} from './gameplay/cover-system.mjs';
 
 // Try a second CDN if the primary module host is unavailable or blocked.
 async function loadThreeModule() {
@@ -562,12 +562,9 @@ function selectCoverPlacements() {
   for (const radius of [11.5, 13.5]) {
     for (const angle of angles) {
       const rotation = Math.PI / 2 - angle;
-      const cosine = Math.abs(Math.cos(rotation)), sine = Math.abs(Math.sin(rotation));
-      const halfX = cosine * 1.5 + sine * .5975 + .04;
-      const halfZ = sine * 1.5 + cosine * .5975 + .04;
       const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
       if (Math.hypot(x, z - 8) < 3.2) continue;
-      const candidate = { id: 'vtk-cover-' + (placements.length + 1), x, z, halfX, halfZ, centerY: .6783, halfY: .6783, material: 'composite' };
+      const candidate = createCoverCollider('vtk-cover-' + (placements.length + 1), x, z, rotation);
       const overlaps = [...arenaColliders, ...reserved].some(other =>
         Math.abs(candidate.x - other.x) < candidate.halfX + other.halfX + .65 &&
         Math.abs(candidate.z - other.z) < candidate.halfZ + other.halfZ + .65
@@ -776,6 +773,7 @@ async function loadVTKEnvironmentAssets() {
         const material = architecturePanelMat.clone();
         material.color.setHex(0x526d7d);
         const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.z = -.1475; // Centre the source mesh's asymmetric local Z bounds on its collision proxy.
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.assetPipeline = 'VTK';
