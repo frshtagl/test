@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#080d17">
+  <meta name="description" content="ARENA ZERO — survive the machine waves.">
+  <title>ARENA ZERO // PvE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <main id="game-shell">
+    <div id="game"></div>
+    <div class="vignette"></div>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">A</span><div><strong>ARENA ZERO</strong><small>COMBAT SIMULATION // 0.1</small></div></div>
+      <div class="wave-block"><small>SECTOR</small><strong id="wave">01</strong><span id="phase">INCOMING</span></div>
+      <div class="top-right"><span class="live-dot"></span> SYSTEM ONLINE</div>
+    </header>
+    <section class="stats">
+      <div class="stat"><small>ELIMINATIONS</small><strong id="kills">000</strong></div>
+      <div class="stat"><small>THREAT LEVEL</small><strong id="threat">LOW</strong></div>
+      <div class="stat"><small>HOSTILES</small><strong id="hostiles">00</strong></div>
+    </section>
+    <div id="toast" class="toast">WAVE 01 // HOSTILES DETECTED</div>
+    <div class="crosshair"><i></i><b></b><i></i><b></b></div>
+    <div id="lock-label" class="lock-label">TARGET ACQUIRED</div>
+    <section class="bottom-hud">
+      <div class="health-panel">
+        <div class="hud-label"><span>VITALS</span><strong id="health-text">100 / 100</strong></div>
+        <div class="bar"><span id="health-bar"></span></div>
+        <div class="hud-label sub"><span>SHIELD INTEGRITY</span><span>ACTIVE</span></div>
+      </div>
+      <div class="ammo-panel"><div class="ammo-number" id="ammo">30<span> / 30</span></div><small>ARC RIFLE <b id="reload-label">READY</b></small></div>
+      <div class="controls-panel"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SHIFT</kbd> SPRINT</span><span><kbd>SPACE</kbd> DASH</span><span><kbd>R</kbd> RELOAD</span></div>
+    </section>
+    <aside class="settings">
+      <div class="settings-title">COMBAT ASSIST <span>◆</span></div>
+      <label class="toggle-row"><span>AIM ASSIST <small>SMART TARGETING</small></span><input id="aim-toggle" type="checkbox" checked><i></i></label>
+      <label class="toggle-row"><span>AUTO FIRE <small>CONTINUOUS ENGAGEMENT</small></span><input id="fire-toggle" type="checkbox" checked><i></i></label>
+      <div class="range-row"><label for="aim-range">LOCK RANGE <b id="range-value">24m</b></label><input id="aim-range" type="range" min="8" max="36" value="24"></div>
+      <div class="assist-note"><span class="live-dot"></span> PvE ASSIST SYSTEM ENABLED</div>
+    </aside>
+    <div id="start-screen" class="overlay">
+      <div class="start-card">
+        <div class="eyebrow">ROGUE PROTOCOL // INITIATED</div>
+        <h1>ARENA<span>ZERO</span></h1>
+        <p>THE MACHINES HAVE TAKEN THE SECTOR.<br>YOU ARE THE LAST LINE OF DEFENCE.</p>
+        <div class="start-meta"><span>MODE <b>ENDLESS PvE</b></span><span>LOADOUT <b>ARC RIFLE</b></span></div>
+        <button id="start-button">ENTER THE ARENA <span>↗</span></button>
+        <small>WASD TO MOVE · MOUSE TO LOOK · AUTO COMBAT OPTIONAL</small>
+      </div>
+    </div>
+    <div id="end-screen" class="overlay hidden"><div class="start-card"><div class="eyebrow">SIGNAL LOST</div><h1>RUN<span> OVER</span></h1><p>THE MACHINES CLAIMED THIS SECTOR.<br>YOUR NEXT RUN STARTS NOW.</p><div class="final-score">ELIMINATIONS <b id="final-kills">0</b></div><button id="restart-button">REDEPLOY <span>↗</span></button></div></div>
+    <div class="footer-note">ARENA ZERO <span>•</span> SURVIVE THE MACHINE</div>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
