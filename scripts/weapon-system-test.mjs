@@ -3,8 +3,8 @@ import {WEAPON_STATUS,createWeaponSystem,canFireWeapon,consumeWeaponRound,beginW
 const d={rifle:{mag:3,reload:900,rate:100},shotgun:{mag:2,reload:1200,rate:600},precision:{mag:1,reload:1500,rate:800}},s=createWeaponSystem(d,2);
 assert.equal(s.reserves.rifle,6);assert.equal(consumeWeaponRound(s,'rifle',0),true);assert.equal(canFireWeapon(s,'rifle',50),false);assert.equal(canFireWeapon(s,'rifle',100),true);
 stepWeaponSystem(s,.05);stepWeaponSystem(s,.05);assert.equal(s.status,WEAPON_STATUS.READY);
-assert.equal(beginWeaponReload(s,'rifle',3),true);stepWeaponSystem(s,.5);assert.equal(s.magazines.rifle,2);stepWeaponSystem(s,.4);assert.equal(s.magazines.rifle,3);assert.equal(s.reserves.rifle,5);
+assert.equal(beginWeaponReload(s,'rifle',3),true);for(let i=0;i<10;i++)stepWeaponSystem(s,.05);assert.equal(s.magazines.rifle,2);for(let i=0;i<8;i++)stepWeaponSystem(s,.05);assert.equal(s.magazines.rifle,3);assert.equal(s.reserves.rifle,5);
 consumeWeaponRound(s,'rifle',200);beginWeaponReload(s,'rifle',3);cancelWeaponReload(s);assert.equal(s.magazines.rifle,2);assert.equal(s.reserves.rifle,5);
-requestWeaponSwap(s,'shotgun');stepWeaponSystem(s,.1);assert.equal(s.activeId,'rifle');stepWeaponSystem(s,.1);assert.equal(s.activeId,'shotgun');assert.equal(s.magazines.rifle,2);
+requestWeaponSwap(s,'shotgun');stepWeaponSystem(s,.05);stepWeaponSystem(s,.05);stepWeaponSystem(s,.05);assert.equal(s.activeId,'rifle');stepWeaponSystem(s,.05);assert.equal(s.activeId,'shotgun');assert.equal(s.magazines.rifle,2);
 beginWeaponReload(s,'shotgun',2);for(let i=0;i<24;i++)stepWeaponSystem(s,.05);assert.equal(s.magazines.shotgun,2);
 setWeaponCapacity(s,'rifle',4,true);assert.equal(s.magazines.rifle,4);resetWeaponSystem(s);assert.equal(s.magazines.rifle,3);assert.equal(s.reserves.rifle,12);console.log('ARENA ZERO weapon state-machine checks passed.');

@@ -1445,6 +1445,7 @@ function shoot() {
   addMuzzleFlash(origin, baseDirection, def.color, currentWeapon);
   updateAmmoHUD();
 }
+// Reload duration uses def.reload / 1000 / runModifiers.reloadSpeed inside the weapon state module.
 function reload() {
   if(beginWeaponReload(weaponSystem,currentWeapon,magazineSize(currentWeapon),runModifiers.reloadSpeed))updateAmmoHUD();
 }
