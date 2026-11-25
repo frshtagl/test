@@ -74,7 +74,7 @@ assert.match(roadmap, /## 0\.6 — Environment visual upgrade/);
 assert.match(roadmap, /## 0\.7 — Lighting and shadows/);
 assert.match(roadmap, /## 0\.8 — PBR materials and surface response/);
 assert.match(roadmap, /## 0\.9 — Character silhouette and armor detail/);
-assert.match(roadmap, /## 1\.2 — Performance and visual QA/);
+assert.match(roadmap, /## 1\.3 — Performance and visual QA/);
 assert.ok(js.includes('function buildPlayerLeg('));
 assert.ok(js.includes('playerParts.leftLeg.hip.rotation.x'));
 assert.ok(js.includes('function buildEnemyLimb('));
