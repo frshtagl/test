@@ -12,6 +12,7 @@ assert.equal(heavy.role,'anchor');
 assert.equal(createSquadAssignment('scout',5,3,4).squadId,'wave-3-squad-2');
 assert.throws(()=>createSquadAssignment('medic',1,1),/Unknown/);
 assert.throws(()=>createSquadAssignment('scout',0,1),/invalid/);
+assert.throws(()=>createSquadAssignment('scout',1,1,4.5),/invalid/);
 const self={position:{x:0,z:0},userData:{squadId:left.squadId}};
 const ally={position:{x:1,z:0},userData:{squadId:left.squadId}};
 const otherSquad={position:{x:0,z:1},userData:{squadId:'different'}};
@@ -19,6 +20,8 @@ const separation=calculateSquadSeparation(self.position,[self,ally,otherSquad],l
 assert.ok(separation.x<0&&Math.abs(separation.z)<1e-9,'Ally separation should push away from a same-squad neighbour');
 assert.ok(separation.magnitude>0&&separation.magnitude<=1);
 assert.deepEqual(calculateSquadSeparation(self.position,[self,otherSquad],left.squadId,self),{x:0,z:0,magnitude:0});
+const malformedAlly={position:{x:NaN,z:0},userData:{squadId:left.squadId}};
+assert.deepEqual(calculateSquadSeparation(self.position,[self,malformedAlly],left.squadId,self),{x:0,z:0,magnitude:0});
 const coincidentSelf={position:{x:0,z:0},userData:{squadId:'overlap',squadSlot:0}};
 const coincidentAlly={position:{x:0,z:0},userData:{squadId:'overlap',squadSlot:1}};
 assert.ok(calculateSquadSeparation(coincidentSelf.position,[coincidentSelf,coincidentAlly],'overlap',coincidentSelf).magnitude>0,'Exact spawn overlap must be resolved deterministically');
