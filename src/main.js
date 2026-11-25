@@ -1740,12 +1740,10 @@ addEventListener('mousemove', event => {
     pitch = THREE.MathUtils.clamp(pitch - event.movementY * .0018 * mouseSensitivity, -1.48, 1.48);
   }
 });
-let hasHadPointerLock = false;
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement === renderer.domElement) {
-    hasHadPointerLock = true;
-  } else if (hasHadPointerLock && started && !gameOver && !intermission && !paused) {
-    pauseGame();
+  if (document.pointerLockElement !== renderer.domElement) {
+    keys.Mouse0 = false;
+    keys.Mouse2 = false;
   }
 });
 document.addEventListener('visibilitychange', () => {
