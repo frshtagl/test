@@ -30,3 +30,9 @@ Scout and Heavy attacks have visible ground telegraphs. Leaving the warning rang
 
 ## Validation
 Run `node scripts/tactical-ai-test.mjs` and `node scripts/cover-system-test.mjs`, then the movement, weapon, combat, VTK and smoke suites. Browser playtesting must still confirm cover placement, collision feel, flanking quality, telegraph readability and performance under full enemy waves.
+
+
+## Squad coordination (2.1)
+Wave spawns are assigned to squads of up to four members. Scout roles alternate between left and right flanks, Gunner roles alternate between left and right support lanes, and Heavy units anchor the squad's close-range pressure. These roles bias the candidate positions selected by the existing A* tactical goal planner; they do not bypass obstacle checks or line-of-sight validation.
+
+When a squad member sees the player, it relays the updated last-known position to teammates whose contact memory is stale. Teammates then invalidate their old route and replan toward the shared contact. A small same-squad separation vector reduces crowding while leaving obstacle collision and A* pathfinding authoritative.
